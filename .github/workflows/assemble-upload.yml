@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.sync_parts/**'
+      - '.sync_payload/**'
 
 permissions:
   contents: write
@@ -16,27 +16,25 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Assemble file when READY is present
+      - name: Assemble verified HTML
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -f .sync_parts/READY ]; then
+          if [ ! -f .sync_payload/READY ]; then
             echo "Upload still in progress; READY not present."
             exit 0
           fi
-          : > index_v3.0_minimal.html
-          for n in $(seq -w 2 15); do
-            p=".sync_parts/part_${n}"
-            test -f "$p" || { echo "Missing $p"; exit 1; }
-            base64 -d "$p" >> index_v3.0_minimal.html
+          for n in 01 02 03 04; do
+            test -f ".sync_payload/payload_${n}" || { echo "Missing payload_${n}"; exit 1; }
           done
+          cat .sync_payload/payload_01 .sync_payload/payload_02 .sync_payload/payload_03 .sync_payload/payload_04 | base64 -d | xz -d > index_v3.0_minimal.html
           actual=$(sha256sum index_v3.0_minimal.html | awk '{print $1}')
-          expected_sha='26e4c70755de503537487f9202ce9ff15d2aa77231b89eb74e0b73b71d9bafad'
-          if [ "$actual" != "$expected_sha" ]; then
+          expected='26e4c70755de503537487f9202ce9ff15d2aa77231b89eb74e0b73b71d9bafad'
+          if [ "$actual" != "$expected" ]; then
             echo "SHA256 mismatch: $actual"
             exit 1
           fi
-          rm -rf .sync_parts
+          rm -rf .sync_payload .sync_parts
           rm -f .github/workflows/assemble-upload.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
