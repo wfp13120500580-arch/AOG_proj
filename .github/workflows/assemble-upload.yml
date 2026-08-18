@@ -28,7 +28,7 @@ jobs:
           fi
           cat $(find .sync_parts -maxdepth 1 -type f -name 'part_*' | sort) > index_v3.0_minimal.html
           actual=$(sha256sum index_v3.0_minimal.html | awk '{print $1}')
-          expected_sha='26e4c70755de503537487f9202ce9ff15d2aa77231b89eb74e0b73b71d9bafad'
+          expected_sha='c2e344941efb898bc3b9cc864229221d784cdb74f0d94acb8ac4f531a9b1e48f'
           if [ "$actual" != "$expected_sha" ]; then
             echo "SHA256 mismatch: $actual"
             exit 1
