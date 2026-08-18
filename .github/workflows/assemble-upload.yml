@@ -16,18 +16,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Assemble file when all parts are present
+      - name: Assemble file when READY is present
         shell: bash
         run: |
           set -euo pipefail
-          expected=14
-          count=$(find .sync_parts -maxdepth 1 -type f -name 'part_*' 2>/dev/null | wc -l | tr -d ' ')
-          if [ "$count" != "$expected" ]; then
-            echo "Only $count/$expected parts present; nothing to assemble yet."
+          if [ ! -f .sync_parts/READY ]; then
+            echo "Upload still in progress; READY not present."
             exit 0
           fi
           : > index_v3.0_minimal.html
-          for p in $(find .sync_parts -maxdepth 1 -type f -name 'part_*' | sort); do
+          for n in $(seq -w 2 15); do
+            p=".sync_parts/part_${n}"
+            test -f "$p" || { echo "Missing $p"; exit 1; }
             base64 -d "$p" >> index_v3.0_minimal.html
           done
           actual=$(sha256sum index_v3.0_minimal.html | awk '{print $1}')
