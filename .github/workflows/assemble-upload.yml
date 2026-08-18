@@ -26,14 +26,18 @@ jobs:
             echo "Only $count/$expected parts present; nothing to assemble yet."
             exit 0
           fi
-          cat $(find .sync_parts -maxdepth 1 -type f -name 'part_*' | sort) > index_v3.0_minimal.html
+          : > index_v3.0_minimal.html
+          for p in $(find .sync_parts -maxdepth 1 -type f -name 'part_*' | sort); do
+            base64 -d "$p" >> index_v3.0_minimal.html
+          done
           actual=$(sha256sum index_v3.0_minimal.html | awk '{print $1}')
-          expected_sha='c2e344941efb898bc3b9cc864229221d784cdb74f0d94acb8ac4f531a9b1e48f'
+          expected_sha='26e4c70755de503537487f9202ce9ff15d2aa77231b89eb74e0b73b71d9bafad'
           if [ "$actual" != "$expected_sha" ]; then
             echo "SHA256 mismatch: $actual"
             exit 1
           fi
           rm -rf .sync_parts
+          rm -f .github/workflows/assemble-upload.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
