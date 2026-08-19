@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.sync_html/**'
+      - '.sync_script/apply.py'
 
 permissions:
   contents: write
@@ -20,20 +20,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for n in 00 01 02 03 04; do
-            if [ ! -f ".sync_html/workbench.part${n}" ]; then
-              echo "HTML upload in progress: missing part${n}"
-              exit 0
-            fi
-          done
-          cat .sync_html/workbench.part00 .sync_html/workbench.part01 .sync_html/workbench.part02 .sync_html/workbench.part03 .sync_html/workbench.part04 > index_v3.0_minimal.html
+          python .sync_script/apply.py
           actual=$(sha256sum index_v3.0_minimal.html | awk '{print $1}')
           expected='49d708fb95f5073afd109c5d60062d116afb3277d6382e771d46a44678b83299'
           if [ "$actual" != "$expected" ]; then
             echo "SHA256 mismatch: $actual"
             exit 1
           fi
-          rm -rf .sync_html .sync_payload
+          rm -rf .sync_script .sync_html .sync_payload
           rm -f .github/workflows/apply-workbench-update.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
