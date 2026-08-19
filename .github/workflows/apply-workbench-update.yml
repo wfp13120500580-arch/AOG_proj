@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.sync_payload/workbench_update.b64'
+      - '.sync_payload/**'
 
 permissions:
   contents: write
@@ -20,7 +20,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d .sync_payload/workbench_update.b64 | xz -d > index_v3.0_minimal.html
+          for n in 00 01 02 03 04; do
+            if [ ! -f ".sync_payload/workbench_update.part${n}" ]; then
+              echo "Payload upload in progress: missing part${n}"
+              exit 0
+            fi
+          done
+          cat .sync_payload/workbench_update.part00 .sync_payload/workbench_update.part01 .sync_payload/workbench_update.part02 .sync_payload/workbench_update.part03 .sync_payload/workbench_update.part04 | base64 -d | xz -d > index_v3.0_minimal.html
           actual=$(sha256sum index_v3.0_minimal.html | awk '{print $1}')
           expected='49d708fb95f5073afd109c5d60062d116afb3277d6382e771d46a44678b83299'
           if [ "$actual" != "$expected" ]; then
