@@ -1,0 +1,2046 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AOG 智能保障助手</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus@2.6.1/dist/index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9/dist/leaflet.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Microsoft YaHei',system-ui,sans-serif;background:#f0f2f5;color:#1f2937}
+
+/* ===== Header ===== */
+.app-header{background:#0a1628;color:#c9d1d9;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:50px;border-bottom:1px solid #1e2a3a}
+.app-header h1{font-size:17px;font-weight:700;display:flex;align-items:center;gap:7px}
+.app-header h1 span{color:#58a6ff}
+.header-tabs{display:flex;gap:4px}
+.header-tabs button{background:transparent;color:#8b949e;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;border-bottom:2px solid transparent}
+.header-tabs button.active,.header-tabs button:hover{color:#fff;background:rgba(255,255,255,.05)}
+.header-tabs button.active{border-bottom-color:#58a6ff}
+
+/* ===== Monitor ===== */
+.monitor-container{display:flex;height:calc(100vh - 50px)}
+.monitor-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.stats-row{display:flex;gap:14px;padding:14px 20px;flex-wrap:wrap;border-bottom:1px solid #e4e7ed;background:#fff}
+.stat-card{background:#f9fafb;border-radius:10px;padding:12px 18px;flex:1;min-width:120px;border:1px solid #e4e7ed}
+.stat-card .stat-label{font-size:11px;color:#6b7280;margin-bottom:3px}
+.stat-card .stat-value{font-size:21px;font-weight:700;color:#1a3a5c}
+.stat-card .stat-sub{font-size:10px;color:#6b7280;margin-top:1px}
+
+/* ===== View Switcher ===== */
+.view-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.view-toolbar{padding:8px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e4e7ed;background:#fff}
+.view-toolbar h2{font-size:14px;font-weight:600}
+.view-toggle{display:flex;gap:4px;background:#f3f4f6;border-radius:6px;padding:1px}
+.view-toggle button{border:none;padding:5px 14px;border-radius:5px;cursor:pointer;font-size:12px;background:transparent;color:#6b7280;transition:all .12s}
+.view-toggle button.active{background:#fff;color:#1a3a5c;font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+/* Task List */
+.task-list-wrap{flex:1;overflow-y:auto;padding:12px 20px}
+.task-table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.task-table th{text-align:left;padding:9px 10px;font-size:11px;color:#6b7280;font-weight:600;background:#f9fafb;border-bottom:1px solid #e4e7ed;white-space:nowrap}
+.task-table td{padding:9px 10px;font-size:12px;border-bottom:1px solid #f3f4f6}
+.task-table tr{cursor:pointer;transition:background .1s}
+.task-table tr:hover{background:#f0f6ff}
+.task-table tr.selected{background:#dbeafe}
+
+/* ===== Map View ===== */
+.map-wrap{flex:1;position:relative}
+.map-wrap .leaflet-container{width:100%;height:100%}
+.aog-popup{font-size:12px;line-height:1.5;min-width:180px}
+.aog-popup .pop-title{font-weight:600;color:#1a3a5c;margin-bottom:4px;font-size:13px}
+.aog-popup .pop-row{display:flex;justify-content:space-between;margin-bottom:2px}
+.aog-popup .pop-row .pop-lbl{color:#909399}
+.aog-popup .pop-row .pop-val{font-weight:500}
+.aog-popup .pop-plan{font-size:11px;color:#606266;margin-top:4px;background:#fafafa;padding:4px 6px;border-radius:4px;line-height:1.4}
+.pop-action{padding:4px 0;border-top:1px solid #e4e7ed;margin-top:6px}
+.pop-action a{color:#409eff;font-size:11px;cursor:pointer;text-decoration:none;font-weight:500}
+.map-legend{position:absolute;bottom:20px;right:20px;background:rgba(255,255,255,.92);border-radius:8px;padding:8px 12px;box-shadow:0 2px 8px rgba(0,0,0,.1);font-size:11px;z-index:1000}
+.map-legend .legend-item{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.map-legend .legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.map-legend .legend-line{width:24px;height:2px;flex-shrink:0;border-radius:1px}
+
+/* ===== Badge ===== */
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.badge-red{background:#fee2e2;color:#991b1b}
+.badge-orange{background:#ffedd5;color:#9a3412}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.badge-green{background:#dcfce7;color:#166534}
+.aog-lv1{background:#fef2f2;color:#991b1b;font-weight:700;padding:2px 10px;border:1px solid #fecaca}
+.aog-lv2{background:#fff7ed;color:#c2410c;font-weight:700;padding:2px 10px;border:1px solid #fed7aa}
+.aog-lv3{background:#fefce8;color:#a16207;font-weight:700;padding:2px 10px;border:1px solid #fef08a}
+.aog-lv4{background:#eff6ff;color:#1e40af;font-weight:700;padding:2px 10px;border:1px solid #bfdbfe}
+
+/* ===== Detail Panel ===== */
+.detail-panel{width:380px;border-left:1px solid #e4e7ed;background:#fafbfc;display:flex;flex-direction:column;overflow:hidden}
+.detail-scroll{flex:1;overflow-y:auto;padding:16px}
+.detail-panel h3{font-size:14px;font-weight:600;color:#111827;margin-bottom:8px}
+.detail-card{background:#fff;border-radius:8px;padding:12px;margin-bottom:10px;border:1px solid #e9ecf0}
+.detail-card .drow{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.detail-card .drow .dlbl{color:#6b7280}
+.detail-card .drow .dval{font-weight:500}
+.detail-card .dplan{font-size:12px;line-height:1.5;color:#374151}
+.cl-node{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px}
+.cl-node .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot.done{background:#67c23a}
+.dot.current{background:#409eff;box-shadow:0 0 5px rgba(64,158,255,.4)}
+.dot.pending{background:#c0c4cc}
+.cl-node.current-node{font-weight:600;color:#409eff}
+
+/* ===== Chat Panel ===== */
+.chat-panel{background:#fff;border-top:1px solid #d1d5db;display:flex;flex-direction:column;height:360px}
+.chat-header{padding:10px 14px;background:#f9fafb;border-bottom:1px solid #e4e7ed;display:flex;justify-content:space-between;align-items:center}
+.chat-header span{font-size:13px;font-weight:600;color:#1a3a5c}
+.chat-header .chat-status{font-size:11px;color:#909399;display:flex;align-items:center;gap:4px}
+.chat-header .chat-status .status-dot-live{width:6px;height:6px;border-radius:50%;background:#67c23a}
+.chat-header .chat-status .status-dot-off{width:6px;height:6px;border-radius:50%;background:#c0c4cc}
+.chat-messages{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.msg{display:flex;gap:6px;font-size:12px;line-height:1.6}
+.msg.user{justify-content:flex-end}
+.msg .avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.msg.assistant .avatar{background:#eef2ff;color:#1a3a5c}
+.msg.user .avatar{background:#1a3a5c;color:#fff}
+.msg .bubble{padding:8px 12px;border-radius:12px;max-width:85%;word-break:break-word}
+.msg.assistant .bubble{background:#f3f4f6;color:#1f2937;border-top-left-radius:2px}
+.msg.user .bubble{background:#dbeafe;color:#1e3a5f;border-top-right-radius:2px}
+.msg.streaming .bubble{border-left:2px solid #409eff;padding-left:10px}
+.chat-input-box{display:flex;gap:6px;padding:10px 14px;border-top:1px solid #e4e7ed}
+.chat-input-box input{flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:18px;font-size:12px;outline:none}
+.chat-input-box input:focus{border-color:#409eff}
+.chat-input-box button{padding:6px 14px;border:none;background:#1a3a5c;color:#fff;border-radius:18px;font-size:12px;cursor:pointer;white-space:nowrap}
+.chat-input-box button:disabled{background:#a0aec0;cursor:not-allowed}
+.chat-config{text-align:center;padding:20px 14px;font-size:11px;color:#909399;border-top:1px solid #e4e7ed}
+.chat-config input{margin:4px 0;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;width:100%}
+.chat-config button{margin-top:8px;padding:4px 16px;background:#409eff;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer}
+.wb-chat-btn{padding:8px 16px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;margin-top:8px;width:100%}
+.detail-empty{padding:40px 20px;text-align:center;color:#c0c4cc}
+
+/* ===== Workbench v2 ===== */
+.workbench{display:flex;gap:12px;height:calc(100vh - 106px);padding:10px 16px}
+
+/* ===== 左侧保障方案面板 ===== */
+.sol-panel{width:330px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.sol-panel .sol-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 6px}
+.sol-panel .sol-info-item{display:flex;justify-content:space-between;font-size:10px;line-height:1.7;padding:1px 0}
+.sol-panel .sol-info-item .sol-info-label{color:rgba(255,255,255,.6);flex-shrink:0;white-space:nowrap}
+.sol-panel .sol-info-item .sol-info-val{color:#fff;text-align:right;font-weight:500}
+.sol-panel .sol-info-col{display:flex;flex-direction:column;gap:0}
+.sol-panel .sol-info-col-right{grid-column:2;grid-row:3/5;display:flex;flex-direction:column;justify-content:center;gap:1px}
+.sol-panel .sol-info-airport{grid-column:1/3}
+.sol-info-card{background:linear-gradient(135deg,#1a3a5c 0%,#2d5a87 100%);border-radius:8px;padding:12px 14px;color:#fff}
+.sol-info-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sol-task-id{font-size:14px;font-weight:700;letter-spacing:.5px}
+.sol-task-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.sol-task-badge.lvl1{background:#ef4444;color:#fff}
+.sol-task-badge.lvl2{background:#f97316;color:#fff}
+.sol-task-badge.lvl3{background:#eab308;color:#000}
+.sol-task-badge.lvl4{background:#6b7280;color:#fff}
+
+
+.sol-list{flex:1;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow-y:auto;display:flex;flex-direction:column}
+.sol-list-header{padding:10px 12px;font-size:13px;font-weight:600;color:#1a3a5c;border-bottom:1px solid #ebeef5;flex-shrink:0;display:flex;align-items:center;gap:6px}
+.sol-list-header::before{content:'';width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sol-card{margin:8px;border:1px solid #e4e7ed;border-radius:6px;overflow:hidden}
+.sol-card-title{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#fafbfc;border-bottom:1px solid #f0f2f5}
+.sol-card-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px}
+.sol-card-badge.sol-active{background:#166534;color:#fff}
+.sol-card-badge.sol-pending{background:#f5f5f5;color:#909399}
+.sol-card-body{padding:8px 10px}
+.sol-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;line-height:1.5}
+.sol-row span:first-child{color:#909399;flex-shrink:0;margin-right:8px}
+.sol-row span:last-child{color:#374151;text-align:right;font-weight:500}
+.sol-divider{font-size:10px;color:#909399;padding:6px 0 2px;margin-top:4px;border-top:1px dashed #e4e7ed;font-weight:600}
+.sol-node-name{color:#909399!important;font-size:10px}
+.sol-node-ok{color:#16a34a!important;font-size:10px}
+.sol-node-wait{color:#909399!important;font-size:10px}
+.sol-node-progress{color:#f59e0b!important;font-size:10px}
+
+/* ===== 中间子任务面板 ===== */
+.rec-panel{flex:1;min-width:0;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;flex-direction:column;overflow:hidden}
+.rec-top{flex:2;overflow-y:auto;padding:14px}
+.rec-map{flex:1;position:relative;border-top:1px solid #e4e7ed;min-height:200px}
+.rec-map .leaflet-container{width:100%;height:100%}
+.rec-map-marker{width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.rec-map-popup{font-size:11px;line-height:1.5;min-width:160px}
+.rec-map-popup .rmp-title{font-weight:600;color:#1a3a5c;font-size:12px;margin-bottom:3px}
+.rec-map-popup .rmp-row{display:flex;justify-content:space-between;margin-bottom:1px}
+.rec-map-popup .rmp-lbl{color:#909399}
+.rec-map-popup .rmp-val{font-weight:500}
+@keyframes pulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.1);opacity:.7}100%{transform:scale(1);opacity:1}}
+.phase-head{display:flex;align-items:center;justify-content:space-between;background:#f0f6ff;border-radius:8px;padding:10px 14px;margin-bottom:12px}
+.phase-head h3{font-size:14px;color:#1a3a5c;margin:0}
+
+.task-card{background:#fff;border:1px solid #e4e7ed;border-radius:8px;margin-bottom:10px;overflow:hidden;transition:all .15s}
+.task-card:hover{border-color:#c0c4cc}
+.task-card.card_done{opacity:.7;border-color:#e4e7ed}
+.task-card.card_skip{opacity:.5}
+.task-card-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#fafbfc;border-bottom:1px solid #f0f2f5}
+.task-card-title{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#1a3a5c}
+.task-card-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.task-card-dot.done{background:#67c23a}
+.task-card-dot.pending{background:#dcdfe6}
+.task-card-icon{font-size:12px;width:16px;text-align:center;flex-shrink:0}
+.task-card-actions{display:flex;gap:4px;flex-shrink:0}
+.task-card-body{padding:10px 12px}
+.task-card-desc{font-size:11px;color:#909399;margin:0 0 8px;line-height:1.5}
+
+/* 最终结果确认栏 */
+.confirm-bar{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;margin-bottom:8px;overflow:hidden}
+.confirm-bar-header{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#fef3c7;font-size:11px;font-weight:600;color:#92400e}
+.confirm-bar-body{padding:8px 10px}
+.confirm-field{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:11px}
+.confirm-field label{width:80px;flex-shrink:0;color:#606266;text-align:right}
+.confirm-field .el-input,.confirm-field .el-select{flex:1}
+
+/* 智能体预填答案 */
+.agent-prefill{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 10px;margin-bottom:8px}
+.ap-header{display:flex;justify-content:space-between;margin-bottom:4px;font-size:10px;color:#166534;font-weight:600}
+.ap-score{color:#909399;font-weight:400}
+.ap-content{font-size:11px;line-height:1.5;color:#374151}
+.ap-row{margin-bottom:3px}
+.ap-sources,.ap-cases{font-size:10px;color:#909399;margin-top:3px}
+
+/* ===== 右侧面板（阶段 + 参考） ===== */
+.right-panel{width:500px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+/* 紧凑阶段面板 */
+.cl-panel-compact{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden;flex-shrink:0}
+.cl-scroll{overflow-y:auto;padding:2px 0;max-height:220px}
+.phase-group{border-bottom:1px solid #f0f2f5}
+.phase-header{padding:7px 10px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#374151;user-select:none;transition:all .12s}
+.phase-header:hover{background:#f0f4ff}
+.phase-header.active_phase{background:#ecf5ff;color:#1a3a5c;border-left:3px solid #409eff;padding-left:7px}
+.phase-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#dcdfe6;transition:all .2s}
+.phase-dot.all_done{background:#67c23a}
+.phase-dot.partial{background:#e6a23c}
+.phase-progress{margin-left:auto;font-size:10px;color:#909399;font-weight:400}
+
+/* 参考面板 */
+.agent-chat-panel{flex:1;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.agent-chat-header{font-size:11px;font-weight:600;color:#303133;padding:7px 10px;border-bottom:1px solid #f0f0f0;background:#fafafa;flex-shrink:0;display:flex;align-items:center;gap:6px}
+.agent-status-badge{font-size:9px;font-weight:500;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:1px 6px}
+.agent-chat-messages{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:6px}
+.agent-chat-messages .msg{max-width:85%;font-size:11px;line-height:1.6;padding:5px 8px;border-radius:6px;word-break:break-word}
+.agent-chat-messages .msg.user{align-self:flex-end;background:#ecf5ff;color:#1a3a5c}
+.agent-chat-messages .msg.assistant{align-self:flex-start;background:#f5f5f5;color:#374151}
+.agent-chat-input{display:flex;border-top:1px solid #f0f0f0;padding:5px 6px;gap:5px;flex-shrink:0}
+.agent-chat-input input{flex:1;border:1px solid #e5e7eb;border-radius:4px;padding:4px 7px;font-size:11px;outline:none}
+.agent-chat-input input:focus{border-color:#409eff}
+.agent-chat-input button{padding:4px 12px;background:#1d4ed8;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer}
+.agent-chat-input button:disabled{opacity:.5;cursor:not-allowed}
+
+/* 保留通用组件 */
+.auto-result{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:11px}
+.auto-result .ar-title{font-weight:600;color:#166534;margin-bottom:3px}
+.auto-result .ar-detail{color:#374151;line-height:1.4}
+.section-block{margin-bottom:16px}
+.section-block h4{margin-bottom:6px;font-size:11px;color:#606266;border-left:3px solid #409eff;padding-left:8px}
+.know-item{padding:7px 9px;margin-bottom:4px;background:#fafafa;border-radius:6px;cursor:pointer;border:1px solid transparent;transition:all .15s}
+.know-item:hover{border-color:#409eff;background:#ecf5ff}
+.know-item .know-title{font-weight:600;font-size:11px;margin-bottom:2px}
+.know-item .know-meta{font-size:10px;color:#909399}
+.rule-item{padding:5px 8px;margin-bottom:3px;background:#fdf6ec;border-left:3px solid #e6a23c;border-radius:4px;font-size:11px}
+.contact-item{display:inline-block;padding:2px 7px;margin:2px;background:#ecf5ff;border-radius:10px;font-size:10px;color:#409eff}
+.bc-template{background:#fafbfc;border:1px solid #e4e7ed;border-radius:6px;padding:10px;font-size:11px;line-height:1.7;white-space:pre-wrap;color:#374151;font-family:'Microsoft YaHei',sans-serif}
+.bc-done-badge{display:inline-flex;align-items:center;gap:3px;background:#f0fdf4;color:#16a34a;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:500;border:1px solid #bbf7d0}
+.audit-step{display:flex;align-items:center;gap:4px;padding:3px 7px;font-size:11px;color:#606266;cursor:pointer;border-radius:4px}
+.audit-step:hover{background:#f5f7fa}
+.audit-step .step-check{width:13px;height:13px;border:1px solid #dcdfe6;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:transparent}
+.audit-step.done .step-check{border-color:#67c23a;background:#67c23a;color:#fff}
+.wb-selector{padding:6px 16px;background:#fff;border-bottom:1px solid #e4e7ed;display:flex;align-items:center;gap:10px}
+.wb-selector span{font-size:12px;color:#606266}
+.wb-selector .el-select{width:260px}
+
+/* 历史案例卡片 */
+.case-match-card{padding:8px;margin-bottom:6px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;cursor:pointer;transition:all .12s}
+.case-match-card:hover{border-color:#7c3aed;background:#f5ebff}
+.case-header{display:flex;justify-content:space-between;margin-bottom:3px}
+.case-id{font-weight:600;font-size:11px;color:#7c3aed}
+/* ===== Knowledge ===== */
+.knowledge-mgr{display:flex;gap:16px;height:calc(100vh - 74px);padding:12px 20px}
+.dir-panel{width:220px;flex-shrink:0;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow-y:auto}
+.dir-panel h3{padding:12px 16px;font-size:13px;border-bottom:1px solid #ebeef5}
+.dir-item{padding:8px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-left:3px solid transparent;transition:all .12s;font-size:12px}
+.dir-item:hover{background:#f5f7fa}
+.dir-item.active{background:#ecf5ff;border-left-color:#409eff;color:#409eff;font-weight:500}
+.dir-item .dir-count{font-size:10px;color:#909399;background:#f0f0f0;padding:1px 7px;border-radius:8px}
+.dir-item.active .dir-count{background:#409eff;color:#fff}
+.dir-item.dir-cat{font-weight:600;background:#f8f9fa;border-left-color:#909399}
+.dir-item.dir-cat:hover{background:#e9ecef}
+.dir-item.dir-cat .dir-arrow{font-size:10px;color:#909399}
+.dir-sub{padding:6px 16px 6px 28px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-left:3px solid transparent;transition:all .12s;font-size:12px;background:#fff}
+.dir-sub:hover{background:#f5f7fa}
+.dir-sub.active{background:#ecf5ff;border-left-color:#409eff;color:#409eff;font-weight:500}
+.dir-sub .dir-count{font-size:10px;color:#909399;background:#f0f0f0;padding:1px 7px;border-radius:8px}
+.dir-sub.active .dir-count{background:#409eff;color:#fff}
+.content-panel{flex:1;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;flex-direction:column;overflow:hidden}
+.content-toolbar{padding:8px 16px;border-bottom:1px solid #ebeef5;display:flex;gap:8px;align-items:center}
+.content-list{flex:1;overflow-y:auto;padding:8px 16px}
+.content-list .file-item{padding:10px 0;border-bottom:1px solid #f0f0f0}
+.content-list .file-item:last-child{border:none}
+.file-item .file-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.file-item .file-preview{font-size:11px;color:#909399;margin-bottom:3px;line-height:1.4}
+.file-item .file-actions{display:flex;gap:4px}
+.tag-item{display:inline-block;background:#f0f0f0;color:#909399;padding:1px 6px;border-radius:8px;font-size:10px;margin-right:2px}
+
+/* ===== Overview ===== */
+.overview{padding:16px 20px}
+.ov-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.ov-card{background:#fff;border-radius:8px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.06);text-align:center}
+.ov-card .ov-num{font-size:26px;font-weight:700;color:#1a3a5c;margin-bottom:5px}
+.ov-card .ov-lbl{font-size:12px;color:#909399}
+.task-node{display:flex;align-items:center;gap:5px;width:100%}
+.task-node .status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-dot.pending{background:#c0c4cc}
+.status-dot.current{background:#409eff;box-shadow:0 0 5px rgba(64,158,255,.4)}
+.status-dot.done{background:#67c23a}
+.task-node .node-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+
+/* Misc */
+.empty-state{text-align:center;padding:50px 0;color:#c0c4cc}
+.full-content{max-height:60vh;overflow-y:auto;white-space:pre-wrap;line-height:1.8;font-size:13px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ===== AOG Assessment Dialog ===== */
+.assessment-step{margin-bottom:18px}
+.assessment-step h4{font-size:13px;color:#1a3a5c;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.assessment-step h4 .step-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#409eff;color:#fff;border-radius:50%;font-size:11px;font-weight:700;flex-shrink:0}
+.assessment-step h4 .step-num.done{background:#67c23a}
+.assess-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.assess-form .form-field{display:flex;flex-direction:column;gap:3px}
+.assess-form .form-field label{font-size:11px;color:#6b7280;font-weight:500}
+.assess-form .form-field input,.assess-form .form-field select,.assess-form .form-field textarea{padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;outline:none}
+.assess-form .form-field input:focus,.assess-form .form-field select:focus,.assess-form .form-field textarea:focus{border-color:#409eff}
+.assess-form .form-field.full{grid-column:1/-1}
+.level-result{text-align:center;padding:18px;border-radius:8px;margin-top:8px}
+.level-result.lv1{background:#fef2f2;border:2px solid #fecaca}
+.level-result.lv2{background:#fff7ed;border:2px solid #fed7aa}
+.level-result.lv3{background:#fefce8;border:2px solid #fef08a}
+.level-result.lv4{background:#eff6ff;border:2px solid #bfdbfe}
+.level-result .lv-label{font-size:22px;font-weight:700}
+.level-result.lv1 .lv-label{color:#991b1b}
+.level-result.lv2 .lv-label{color:#c2410c}
+.level-result.lv3 .lv-label{color:#a16207}
+.level-result.lv4 .lv-label{color:#1e40af}
+.level-result .lv-reason{font-size:11px;color:#6b7280;margin-top:4px}
+.judgment-card{background:#f9fafb;border:1px solid #e4e7ed;border-radius:8px;padding:12px;margin-bottom:8px}
+.judgment-card .judge-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.judgment-card .judge-title{font-size:12px;font-weight:600;color:#1a3a5c}
+.judgment-card .judge-tag{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.judgment-card .judge-tag.pass{background:#dcfce7;color:#166534}
+.judgment-card .judge-tag.block{background:#fee2e2;color:#991b1b}
+.judgment-card .judge-tag.warn{background:#ffedd5;color:#9a3412}
+.judgment-card .judge-detail{font-size:11px;color:#6b7280;line-height:1.5}
+
+/* ===== Case Match Cards (工作台推荐面板) ===== */
+.case-match-card{background:#f0f6ff;border:1px solid #cfe2ff;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.case-match-card:hover{border-color:#409eff;background:#e6f0ff}
+.case-match-card .case-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.case-match-card .case-id{font-size:11px;font-weight:700;color:#1e3a5f}
+.case-match-card .case-score{font-size:10px;background:#409eff;color:#fff;padding:1px 7px;border-radius:8px}
+.case-match-card .case-summary{font-size:11px;color:#374151;margin-bottom:4px;line-height:1.4}
+.case-match-card .case-lesson{font-size:11px;color:#b45309;background:#fffbeb;border-left:3px solid #f59e0b;padding:4px 8px;border-radius:0 4px 4px 0;line-height:1.5;margin-top:6px}
+.case-match-card .case-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.case-match-card .case-tag{font-size:9px;background:#e0e7ff;color:#4338ca;padding:1px 6px;border-radius:8px}
+
+/* ===== Postmortem Dialog ===== */
+.pm-section{margin-bottom:16px}
+.pm-section h4{font-size:13px;font-weight:600;color:#1a3a5c;border-bottom:1px solid #e4e7ed;padding-bottom:6px;margin-bottom:10px}
+.pm-table{width:100%;font-size:11px;border-collapse:collapse}
+.pm-table td{padding:4px 8px;border:1px solid #f0f0f0;vertical-align:top}
+.pm-table td.pm-lbl{background:#f9fafb;color:#6b7280;width:90px;font-weight:500}
+.pm-timeline{display:flex;flex-direction:column;gap:6px}
+.pm-timeline .pm-tl-row{display:flex;align-items:center;gap:10px;font-size:11px}
+.pm-timeline .pm-tl-time{color:#909399;min-width:45px;font-size:10px}
+.pm-timeline .pm-tl-event{padding:4px 10px;background:#f3f4f6;border-radius:4px;flex:1}
+.pm-lesson-item{padding:8px 10px;margin-bottom:6px;background:#fffbeb;border-left:4px solid #e6a23c;border-radius:4px;font-size:11px;line-height:1.5}
+.pm-lesson-item .pm-lesson-label{font-weight:600;color:#b45309;margin-bottom:2px}
+.pm-tag-row{display:flex;gap:6px;flex-wrap:wrap}
+.pm-tag{font-size:10px;background:#ecf5ff;color:#409eff;padding:2px 10px;border-radius:10px;border:1px solid #d9ecff}
+.sp-scheme-card{background:#f0f6ff;border:1px solid #cfe2ff;border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.sp-scheme-card .sp-scheme-title{font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #d0dff8}
+.pm-actions{display:flex;gap:8px;margin-top:4px}
+.pm-actions button{padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px;border:none;font-weight:500}
+.pm-btn-archive{background:#67c23a;color:#fff}
+.pm-btn-archive:hover{background:#5daf34}
+.pm-btn-export{background:#409eff;color:#fff}
+.pm-btn-export:hover{background:#337ecc}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== Header ===== -->
+  <div class="app-header">
+    <h1><span>AOG</span> 智能保障助手</h1>
+    <div class="header-tabs">
+      <button :class="{active:activeTab==='monitor'}" @click="activeTab='monitor';initMapIfNeeded()">监控看板</button>
+      <button :class="{active:activeTab==='workbench'}" @click="activeTab='workbench'">任务工作台</button>
+      <button :class="{active:activeTab==='management'}" @click="activeTab='management';if(!dirs.length)loadDirs()">知识管理</button>
+      <button :class="{active:activeTab==='overview'}" @click="activeTab='overview';if(!stats)loadStats()">系统概览</button>
+    </div>
+  </div>
+
+  <!-- ==================== 监控看板 ==================== -->
+  <div class="monitor-container" v-if="activeTab==='monitor'">
+    <div class="monitor-main">
+      <!-- 统计卡片 -->
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">进行中</div><div class="stat-value">{{ tasksActive }}</div><div class="stat-sub">{{ tasksUrgent }} 紧急</div></div>
+        <div class="stat-card"><div class="stat-label">今日新增</div><div class="stat-value">3</div><div class="stat-sub">较昨日 +1</div></div>
+        <div class="stat-card"><div class="stat-label">本月完成</div><div class="stat-value">47</div><div class="stat-sub">成功率 96%</div></div>
+        <div class="stat-card"><div class="stat-label">平均响应</div><div class="stat-value">4.2h</div><div class="stat-sub">同比 -0.8h</div></div>
+      </div>
+
+      <!-- 视图切换 + 内容区 -->
+      <div class="view-area">
+        <div class="view-toolbar">
+          <h2>AOG 保障任务</h2>
+          <div style="display:flex;gap:10px;align-items:center">
+            <div class="view-toggle">
+              <button :class="{active:viewMode==='list'}" @click="viewMode='list'; initMapIfNeeded()">列表</button>
+              <button :class="{active:viewMode==='map'}" @click="viewMode='map'; initMapIfNeeded()">地图</button>
+            </div>
+            <div style="display:flex;gap:4px;background:#f3f4f6;border-radius:6px;padding:1px">
+              <button @click="listFilter='all'" :style="filterBtnStyle('all')">全部</button>
+              <button @click="listFilter='urgent'" :style="filterBtnStyle('urgent')">紧急</button>
+              <button @click="listFilter='active'" :style="filterBtnStyle('active')">进行中</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 列表视图 ===== -->
+        <div class="task-list-wrap" v-show="viewMode==='list'">
+          <table class="task-table">
+            <thead><tr><th>任务ID</th><th>航班</th><th>飞机号</th><th>故障类型</th><th>等级</th><th>状态</th><th>AOG地点</th><th>当前节点</th><th>发现时间</th></tr></thead>
+            <tbody>
+              <tr v-for="t in filteredTasks" :class="{selected:selectedTask===t}" @click="selectTask(t)">
+                <td style="font-weight:500;color:#1a3a5c;font-size:12px">{{ t.id }}</td>
+                <td>{{ t.flight }}</td>
+                <td style="font-size:11px">{{ t.reg }}</td>
+                <td>{{ t.faultType }}</td>
+                <td><span class="badge" :class="'aog-lv'+t.aogLevel">Lv{{ t.aogLevel }}</span></td>
+                <td><span class="badge" :class="t.status==='进行中'?'badge-blue':'badge-green'">{{ t.status }}</span></td>
+                <td style="font-size:11px">{{ t.airportCN }}（{{ t.iataCode }}）</td>
+                <td>{{ t.currentNode }}</td>
+                <td style="color:#909399;font-size:10px">{{ t.foundTime }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ===== 地图视图 ===== -->
+        <div class="map-wrap" v-show="viewMode==='map'" id="aogMap"></div>
+      </div>
+    </div>
+
+    <!-- ===== 右侧详情面板 ===== -->
+    <div class="detail-panel" v-if="selectedTask">
+      <div class="detail-scroll">
+        <h3>{{ selectedTask.id }}</h3>
+        <div class="detail-card">
+          <div style="font-weight:600;font-size:12px;margin-bottom:6px;color:#1a3a5c">任务关键信息</div>
+          <div class="drow"><span class="dlbl">飞机号</span><span class="dval">{{ selectedTask.reg }}</span></div>
+          <div class="drow"><span class="dlbl">机型</span><span class="dval">{{ selectedTask.aircraftModel }}</span></div>
+          <div class="drow"><span class="dlbl">发动机型号</span><span class="dval">{{ selectedTask.engineModel }}</span></div>
+          <div class="drow"><span class="dlbl">AOG等级</span><span class="dval"><span class="badge" :class="'aog-lv'+selectedTask.aogLevel">Lv{{ selectedTask.aogLevel }}</span></span></div>
+          <div class="drow"><span class="dlbl">AOG地点</span><span class="dval">{{ selectedTask.airportCN }}（{{ selectedTask.iataCode }}）</span></div>
+          <div class="drow"><span class="dlbl">故障描述</span><span class="dval" style="font-size:11px;line-height:1.4;max-width:200px">{{ selectedTask.faultDesc }}</span></div>
+          <div class="drow"><span class="dlbl">需求时间</span><span class="dval">{{ selectedTask.neededBy }}</span></div>
+          <div class="drow"><span class="dlbl">下个航班时间</span><span class="dval">{{ selectedTask.nextFlight }}</span></div>
+        </div>
+        <div class="detail-card">
+          <div style="font-weight:600;font-size:12px;margin-bottom:4px;color:#1a3a5c">当前保障方案</div>
+          <div class="dplan">{{ selectedTask.plan }}</div>
+        </div>
+        <div class="detail-card">
+          <div style="font-weight:600;font-size:12px;margin-bottom:4px;color:#1a3a5c">检查单进度</div>
+          <div class="cl-node" v-for="n in selectedTask.checklistNodes" :class="{'current-node':n.active}">
+            <span class="dot" :class="n.done?'done':(n.active?'current':'pending')"></span>
+            <span>{{ n.name }}</span>
+          </div>
+        </div>
+        <button class="wb-chat-btn" @click="openWorkbench(selectedTask)">进入完整工作台 →</button>
+      </div>
+      <ChatPanel :chat-ready="chatReady" :chat-messages="chatMessages" :chat-loading="chatLoading"
+        :task-context="selectedTask ? {id:selectedTask.id,flight:selectedTask.flight,reg:selectedTask.reg,aircraftModel:selectedTask.aircraftModel,engineModel:selectedTask.engineModel,aogLevel:selectedTask.aogLevel,airportCN:selectedTask.airportCN,iataCode:selectedTask.iataCode,faultDesc:selectedTask.faultDesc,neededBy:selectedTask.neededBy,nextFlight:selectedTask.nextFlight,faultType:selectedTask.faultType,partNo:selectedTask.partNo,location:selectedTask.location,currentNode:selectedTask.currentNode,plan:selectedTask.plan,priority:selectedTask.priority} : null"
+        :chat-ready="chatReady" :cfg-api-key="cfgApiKey" :cfg-api-base="cfgApiBase" :cfg-model="cfgModel" :cfg-msg="cfgMsg"
+        @send="sendChat" @save-config="saveChatConfig" @update:cfg-api-key="v=>cfgApiKey=v"
+        @update:cfg-api-base="v=>cfgApiBase=v" @update:cfg-model="v=>cfgModel=v" />
+    </div>
+
+    <div class="detail-panel" v-else>
+      <div class="detail-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="font-size:38px;margin-bottom:10px">📋</div>
+        <div style="font-size:13px">点击左侧任务查看详情</div>
+        <div style="margin-top:5px;font-size:11px">可查看任务信息、保障方案、检查单和AI助手</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 任务工作台 v2 ==================== -->
+  <div v-if="activeTab==='workbench'">
+    <div class="wb-selector">
+      <span>当前任务：</span>
+      <el-select v-model="wbSelectedTaskId" placeholder="选择AOG任务" @change="onWbTaskChange" clearable>
+        <el-option v-for="t in mockTasks" :key="t.id" :label="t.id + ' - ' + t.flight + ' ' + t.faultType" :value="t.id" />
+      </el-select>
+      <el-button v-if="wbTask" size="small" type="warning" @click="generatePostmortem" style="margin-left:10px;font-size:11px">生成复盘报告</el-button>
+      <el-button v-if="wbTask" size="small" type="primary" @click="openSupportPlanDialog" style="margin-left:6px;font-size:11px">生成保障方案</el-button>
+      <span v-if="wbTask" style="color:#909399;font-size:11px">状态：<span class="badge" :class="wbTask.status==='进行中'?'badge-blue':'badge-green'">{{ wbTask.status }}</span></span>
+    </div>
+    <div class="workbench" v-if="wbTask">
+      <!-- ===== 左侧面板：保障方案 ===== -->
+      <div class="sol-panel">
+        <!-- 任务信息卡 -->
+        <div class="sol-info-card">
+          <div class="sol-info-header">
+            <span class="sol-task-id">{{ wbTask.id }}</span>
+            <span class="sol-task-badge" :class="'lvl'+wbTask.aogLevel">AOG {{ wbTask.aogLevel }}级</span>
+          </div>
+          <div class="sol-info-grid">
+            <div class="sol-info-item"><span class="sol-info-label">机号</span><span class="sol-info-val">{{ wbTask.reg }}</span></div>
+            <div class="sol-info-item"><span class="sol-info-label">机型</span><span class="sol-info-val">{{ wbTask.aircraftModel }}</span></div>
+            <div class="sol-info-item"><span class="sol-info-label">发动机</span><span class="sol-info-val">{{ wbTask.engineModel }}</span></div>
+            <div class="sol-info-item"><span class="sol-info-label">地点</span><span class="sol-info-val">{{ wbTask.airportCN }}（{{ wbTask.iataCode }}）</span></div>
+            <div class="sol-info-item"><span class="sol-info-label">需求时间</span><span class="sol-info-val">{{ wbTask.neededBy }}</span></div>
+            <div class="sol-info-item"><span class="sol-info-label">故障类型</span><span class="sol-info-val">{{ wbTask.faultType }}</span></div>
+            <div class="sol-info-item"><span class="sol-info-label">下个航班</span><span class="sol-info-val">{{ formatNextFlight(wbTask.nextFlight) }}</span></div>
+          </div>
+        </div>
+
+        <!-- 保障方案列表 -->
+        <div class="sol-list">
+          <div class="sol-list-header">实时保障方案</div>
+          <div class="sol-card" v-for="(sol, si) in wbSolutions" :key="si">
+            <div class="sol-card-title">
+              <span style="font-size:11px;font-weight:600">{{ sol.provider }} · {{ sol.origin }}</span>
+              <span class="sol-card-badge" :class="sol.status==='active'?'sol-active':'sol-pending'">{{ sol.status==='active'?'执行中':'待执行' }}</span>
+            </div>
+            <div class="sol-card-body">
+              <div class="sol-row" v-for="(part, pi) in sol.parts" :key="pi">
+                <span>需求件号</span>
+                <span>{{ part.pn }}，{{ part.qty }}</span>
+              </div>
+              <div class="sol-divider">运输信息</div>
+              <div class="sol-row"><span>保障方式</span><span>{{ sol.method }}</span></div>
+              <div class="sol-row"><span>提供方</span><span>{{ sol.provider }}</span></div>
+              <div class="sol-row"><span>运货地</span><span>{{ sol.origin }}</span></div>
+              <div class="sol-row"><span>运输方式</span><span>{{ sol.transport }}</span></div>
+              <div class="sol-row"><span>计划到站</span><span>{{ sol.arriveTime }}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 中间面板：智能体预填答案 + 运输进度地图 ===== -->
+      <div class="rec-panel" v-if="activePhase">
+        <div class="rec-top">
+          <div class="phase-head">
+            <h3>{{ activePhase.title }}</h3>
+            <span style="font-size:11px;color:#909399">{{ wbPhaseDoneCnt(activePhase) }}/{{ activePhase.nodes.length }} 项完成</span>
+          </div>
+          <div class="task-card" v-for="node in activePhase.nodes" :key="node.id" :class="{card_done:wbDoneNodes.has(node.id), card_skip:wbSkippedNodes.has(node.id)}">
+            <div class="task-card-header">
+              <div class="task-card-title">
+                <span class="task-card-dot" :class="wbDoneNodes.has(node.id)?'done':'pending'"></span>
+                <span style="font-size:10px;color:#909399">{{ node.id }}</span>
+                <span>{{ node.title }}</span>
+              </div>
+              <div class="task-card-actions">
+                <el-button size="small" text @click="markNodeDone(node.id)" v-if="!wbDoneNodes.has(node.id)">完成</el-button>
+                <el-button size="small" text type="warning" @click="markNodeSkip(node.id)" v-if="!wbDoneNodes.has(node.id) && !wbSkippedNodes.has(node.id)">跳过</el-button>
+              </div>
+            </div>
+            <div class="task-card-body" v-if="node._answer">
+              <div class="agent-prefill">
+                <div class="ap-header"><span>智能体预填答案</span><span class="ap-score">置信度 {{ (node._answer.score*100).toFixed(0) }}%</span></div>
+                <div class="ap-content">
+                  <div class="ap-row"><b>{{ node._answer.summary }}</b></div>
+                  <div class="ap-row">{{ node._answer.detail }}</div>
+                </div>
+                <div class="ap-sources" v-if="node._answer.data_sources">数据源：{{ node._answer.data_sources.join(' · ') }}</div>
+                <div class="ap-cases" v-if="node._answer.related_cases">关联案例：{{ node._answer.related_cases.join(', ') }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="rec-map" id="recMap"></div>
+      </div>
+      <div class="rec-panel" v-else>
+        <div style="text-align:center;padding:60px;color:#c0c4cc;flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column">
+          <div style="font-size:36px;margin-bottom:10px">📋</div>
+          <div style="font-size:13px">请在右侧选择一个保障阶段</div>
+        </div>
+      </div>
+
+      <!-- ===== 右侧面板：阶段 + 参考 ===== -->
+      <div class="right-panel">
+        <div class="cl-panel-compact">
+          <div class="cl-scroll">
+            <div class="phase-group" v-for="p in wbPhases" :key="p.id">
+              <div class="phase-header" :class="{active_phase:wbActivePhaseId===p.id}" @click="selectPhase(p.id)">
+                <span class="phase-dot" :class="wbPhaseAllDone(p)?'all_done':(wbPhaseDoneCnt(p)>0?'partial':'')"></span>
+                <span>{{ p.title }}</span>
+                <span class="phase-progress">{{ wbPhaseDoneCnt(p) }}/{{ p.nodes.length }}</span>
+              </div>
+              <div v-if="wbActivePhaseId===p.id" style="padding:0 10px 6px">
+                <div v-for="n in p.nodes" style="font-size:10px;padding:1px 0;color:#606266;cursor:pointer" :style="{color:wbDoneNodes.has(n.id)?'#16a34a':'',fontWeight:wbDoneNodes.has(n.id)?'500':''}" @click="selectWbNode(n)">{{ n.id }} {{ n.title }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="agent-chat-panel">
+          <div class="agent-chat-header">保障 Agent <span class="agent-status-badge">已启用</span></div>
+          <div class="agent-chat-messages" ref="agentChatScroll">
+            <div v-for="(m,i) in agentChatMessages" class="msg" :class="[m.role, m.streaming?'streaming':'']">
+              <div class="msg-content" v-html="m.html||m.content"></div>
+            </div>
+            <div v-if="agentChatMessages.length===0" style="text-align:center;color:#c0c4cc;padding:30px 0;font-size:11px">向保障 Agent 发送指令</div>
+          </div>
+          <div class="agent-chat-input">
+            <input v-model="agentChatInput" placeholder="输入指令..." @keyup.enter="sendAgentMessage" :disabled="agentChatLoading">
+            <button @click="sendAgentMessage" :disabled="agentChatLoading || !agentChatInput.trim()">{{ agentChatLoading ? '...' : '发送' }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-else style="text-align:center;padding:60px;color:#c0c4cc"><div style="font-size:38px;margin-bottom:10px">📋</div><div style="font-size:13px">请在上方选择一个 AOG 保障任务</div></div>
+  </div>
+  <!-- ==================== 知识管理 ==================== -->
+  <div class="knowledge-mgr" v-if="activeTab==='management'">
+    <div class="dir-panel" v-loading="dirLoading">
+      <h3>知识库目录</h3>
+      <div class="dir-item" :class="{active:currentDir===''}" @click="selectDir('')" style="border-bottom:1px solid #f0f0f0">全部目录 <span class="dir-count">{{ totalFiles }}</span></div>
+      <div class="dir-item dir-cat" @click="toggleCat('01')">01-法规手册 <span class="dir-arrow">{{catOpen['01']?'▼':'▶'}}</span></div>
+      <template v-if="catOpen['01']">
+        <div class="dir-sub" v-for="d in dirs.filter(d=>d.name.startsWith('01-'))" :class="{active:currentDir===d.name}" @click="selectDir(d.name)">{{ d.name.replace('01-','') }} <span class="dir-count">{{ d.count }}</span></div>
+      </template>
+      <div class="dir-item dir-cat" @click="toggleCat('02')">02-历史案例 <span class="dir-arrow">{{catOpen['02']?'▼':'▶'}}</span></div>
+      <template v-if="catOpen['02']">
+        <div class="dir-sub" v-for="d in dirs.filter(d=>d.name.startsWith('02-'))" :class="{active:currentDir===d.name}" @click="selectDir(d.name)">{{ d.name.replace('02-','') }} <span class="dir-count">{{ d.count }}</span></div>
+      </template>
+      <div class="dir-item dir-cat" @click="toggleCat('03')">03-航材库存 <span class="dir-arrow">{{catOpen['03']?'▼':'▶'}}</span></div>
+      <template v-if="catOpen['03']">
+        <div class="dir-sub" v-for="d in dirs.filter(d=>d.name.startsWith('03-'))" :class="{active:currentDir===d.name}" @click="selectDir(d.name)">{{ d.name.replace('03-','') }} <span class="dir-count">{{ d.count }}</span></div>
+      </template>
+      <div class="dir-item dir-cat" @click="toggleCat('04')">04-供应商联络 <span class="dir-arrow">{{catOpen['04']?'▼':'▶'}}</span></div>
+      <template v-if="catOpen['04']">
+        <div class="dir-sub" v-for="d in dirs.filter(d=>d.name.startsWith('04-'))" :class="{active:currentDir===d.name}" @click="selectDir(d.name)">{{ d.name.replace('04-','') }} <span class="dir-count">{{ d.count }}</span></div>
+      </template>
+      <div class="dir-item dir-cat" @click="toggleCat('05')">05-外站预案 <span class="dir-arrow">{{catOpen['05']?'▼':'▶'}}</span></div>
+      <template v-if="catOpen['05']">
+        <div class="dir-sub" v-for="d in dirs.filter(d=>d.name.startsWith('05-'))" :class="{active:currentDir===d.name}" @click="selectDir(d.name)">{{ d.name.replace('05-','') }} <span class="dir-count">{{ d.count }}</span></div>
+      </template>
+      <div class="dir-item dir-cat" @click="toggleCat('06')">06-运输物流 <span class="dir-arrow">{{catOpen['06']?'▼':'▶'}}</span></div>
+      <template v-if="catOpen['06']">
+        <div class="dir-sub" v-for="d in dirs.filter(d=>d.name.startsWith('06-'))" :class="{active:currentDir===d.name}" @click="selectDir(d.name)">{{ d.name.replace('06-','') }} <span class="dir-count">{{ d.count }}</span></div>
+      </template>
+      <div class="dir-item dir-cat" @click="toggleCat('07')">07-流程规范 <span class="dir-arrow">{{catOpen['07']?'▼':'▶'}}</span></div>
+      <template v-if="catOpen['07']">
+        <div class="dir-sub" v-for="d in dirs.filter(d=>d.name.startsWith('07-'))" :class="{active:currentDir===d.name}" @click="selectDir(d.name)">{{ d.name.replace('07-','') }} <span class="dir-count">{{ d.count }}</span></div>
+      </template>
+    </div>
+    <div class="content-panel">
+      <div class="content-toolbar">
+        <el-input v-model="searchQuery" placeholder="搜索知识条目..." clearable style="width:260px" @keyup.enter="doSearch"><template #append><el-button @click="doSearch" icon="Search"></el-button></template></el-input>
+        <div style="flex:1"></div>
+        <el-button v-if="canWrite" type="primary" size="small" @click="openCreateDialog">新增</el-button>
+        <el-button size="small" @click="exportDir" :disabled="!currentDir">导出</el-button>
+      </div>
+      <div class="content-list" v-loading="listLoading">
+        <template v-if="searchMode">
+          <div style="padding:4px 0;color:#909399;font-size:11px">搜索 "{{ searchQuery }}" 共 {{ searchResults.length }} 条</div>
+          <div class="file-item" v-for="item in searchResults">
+            <div class="file-title">{{ item.title }}</div>
+            <div class="file-preview">{{ (item.content||'').substring(0,160).replace(/\n/g,' ') }}</div>
+            <div style="margin-bottom:2px"><span class="tag-item">{{ item.source }}</span></div>
+            <div class="file-actions"><el-button size="small" text @click="viewFullItem(item)">查看全文</el-button></div>
+          </div>
+        </template>
+        <template v-else>
+          <div class="file-item" v-for="item in fileItems">
+            <div class="file-title">{{ item.title }}</div>
+            <div class="file-preview">{{ item.preview }}</div>
+            <div style="margin-bottom:2px"><span class="tag-item" v-for="t in (item.tags||[])">{{ t }}</span><span class="tag-item" v-if="!(item.tags||[]).length" style="color:#ccc">无标签</span></div>
+            <div class="file-actions"><el-button size="small" text @click="viewFileItem(item)">全文</el-button><el-button v-if="canWrite" size="small" text type="primary" @click="editFileItem(item)">编辑</el-button><el-button v-if="canWrite" size="small" text type="danger" @click="deleteFileItem(item)">删除</el-button></div>
+          </div>
+          <div v-if="!fileItems.length && !listLoading" class="empty-state"><div>暂无条目</div></div>
+          <div style="text-align:center;padding:10px 0" v-if="totalPages>1"><el-pagination v-model:current-page="currentPage" :page-size="20" :total="fileTotal" layout="prev,pager,next" @current-change="loadFileList" small /></div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 系统概览 ==================== -->
+  <div class="overview" v-if="activeTab==='overview'" v-loading="!stats">
+    <div class="ov-stats" v-if="stats"><div class="ov-card"><div class="ov-num">{{ stats.file_count }}</div><div class="ov-lbl">知识文件</div></div><div class="ov-card"><div class="ov-num">{{ stats.chunk_count }}</div><div class="ov-lbl">知识块</div></div><div class="ov-card"><div class="ov-num">{{ stats.feature_dim }} 维</div><div class="ov-lbl">向量维度</div></div></div>
+    <div style="background:#fff;border-radius:8px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)"><h4 style="margin-bottom:8px;font-size:13px">索引覆盖目录</h4><el-tag v-for="d in stats.index_dirs" style="margin:2px" size="small">{{ d }}</el-tag></div>
+  </div>
+
+  <!-- 智能评估功能已集成至工作台中，不再需要独立Tab -->
+
+  <!-- ===== Dialog ===== -->
+  <!-- 复盘报告对话框 -->
+  <el-dialog v-model="pmDialogVisible" title="AOG 保障复盘报告" width="720px" :close-on-click-modal="false">
+    <template v-if="pmGenerated">
+      <div class="pm-section">
+        <h4>基本信息</h4>
+        <table class="pm-table" v-if="pmReport.basic">
+          <tr><td class="pm-lbl">任务ID</td><td>{{ pmReport.basic.id }}</td><td class="pm-lbl">机号</td><td>{{ pmReport.basic.reg }}</td></tr>
+          <tr><td class="pm-lbl">机型</td><td>{{ pmReport.basic.aircraftModel }}</td><td class="pm-lbl">发动机</td><td>{{ pmReport.basic.engineModel }}</td></tr>
+          <tr><td class="pm-lbl">AOG等级</td><td><span :style="{color:pmLevelColors[pmReport.basic.level],fontWeight:'700'}">{{ pmReport.basic.level }} 级</span></td><td class="pm-lbl">站点</td><td>{{ pmReport.basic.site }}</td></tr>
+          <tr><td class="pm-lbl">故障类型</td><td>{{ pmReport.basic.faultType }}</td><td class="pm-lbl">件号</td><td>{{ pmReport.basic.partNo }}</td></tr>
+        </table>
+      </div>
+      <div class="pm-section" v-if="pmReport.timeline">
+        <h4>时间线</h4>
+        <div class="pm-timeline"><div class="pm-tl-row" v-for="tl in pmReport.timeline"><span class="pm-tl-time">{{ tl.time }}</span><span class="pm-tl-event">{{ tl.event }}</span></div></div>
+      </div>
+      <div class="pm-section" v-if="pmReport.decisions">
+        <h4>关键决策点</h4>
+        <div class="pm-tl-row" v-for="(d,i) in pmReport.decisions"><span class="pm-tl-time" style="color:#409eff">决策{{ i+1 }}.</span><span class="pm-tl-event">{{ d }}</span></div>
+      </div>
+      <div class="pm-section" v-if="pmReport.lessons">
+        <h4>经验教训</h4>
+        <div class="pm-lesson-item" v-for="l in pmReport.lessons"><div class="pm-lesson-label">{{ l.label }}</div>{{ l.content }}</div>
+      </div>
+      <div class="pm-section" v-if="pmReport.tags">
+        <h4>标签</h4><div class="pm-tag-row"><span class="pm-tag" v-for="t in pmReport.tags">{{ t }}</span></div>
+      </div>
+    </template>
+    <div v-else class="empty-state" style="padding:30px">正在生成复盘报告...</div>
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="pmDialogVisible = false">关闭</el-button>
+        <el-button type="success" @click="pmArchiveToRAG" :disabled="!pmGenerated">归档至RAG知识库</el-button>
+        <el-button type="primary" @click="pmExport" :disabled="!pmGenerated">导出报告</el-button>
+      </span>
+    </template>
+  </el-dialog>
+  <!-- 保障方案对话框 -->
+  <el-dialog v-model="spDialogVisible" title="AOG 保障方案" width="720px" :close-on-click-modal="false">
+    <template v-if="spGenerated">
+      <div class="pm-section">
+        <h4>基本信息</h4>
+        <table class="pm-table" v-if="spReport.basic">
+          <tr><td class="pm-lbl">任务ID</td><td>{{ spReport.basic.id }}</td><td class="pm-lbl">机号</td><td>{{ spReport.basic.reg }}</td></tr>
+          <tr><td class="pm-lbl">机型</td><td>{{ spReport.basic.aircraftModel }}</td><td class="pm-lbl">发动机</td><td>{{ spReport.basic.engineModel }}</td></tr>
+          <tr><td class="pm-lbl">AOG等级</td><td><span :style="{color:pmLevelColors[spReport.basic.level],fontWeight:'700'}">{{ spReport.basic.level }} 级</span></td><td class="pm-lbl">站点</td><td>{{ spReport.basic.site }}</td></tr>
+          <tr><td class="pm-lbl">故障类型</td><td>{{ spReport.basic.faultType }}</td><td class="pm-lbl">件号</td><td>{{ spReport.basic.partNo }}</td></tr>
+          <tr><td class="pm-lbl">需求时间</td><td>{{ spReport.basic.deadline }}</td><td class="pm-lbl">下个航班</td><td>{{ spReport.basic.nextFlight }}</td></tr>
+        </table>
+      </div>
+      <div class="pm-section" v-if="spReport.schemes">
+        <h4>保障方案明细</h4>
+        <div v-for="(s,i) in spReport.schemes" :key="i" class="sp-scheme-card">
+          <div class="sp-scheme-title">方案{{ i+1 }}：{{ s.name }}</div>
+          <table class="pm-table"><tr><td class="pm-lbl">航材</td><td>{{ s.parts }}</td><td class="pm-lbl">方式</td><td>{{ s.method }}</td></tr><tr><td class="pm-lbl">运输</td><td>{{ s.transport }}</td><td class="pm-lbl">预计到达</td><td>{{ s.eta }}</td></tr><tr v-if="s.contact"><td class="pm-lbl">联系方式</td><td colspan="3">{{ s.contact }}</td></tr></table>
+        </div>
+      </div>
+      <div class="pm-section" v-if="spReport.decision">
+        <h4>决策建议</h4><div class="pm-tl-row"><span class="pm-tl-event">{{ spReport.decision }}</span></div>
+      </div>
+      <div class="pm-section" v-if="spReport.spTags">
+        <h4>标签</h4><div class="pm-tag-row"><span class="pm-tag" v-for="t in spReport.spTags">{{ t }}</span></div>
+      </div>
+    </template>
+    <div v-else class="empty-state" style="padding:30px">正在生成保障方案...</div>
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="spDialogVisible = false">关闭</el-button>
+        <el-button type="success" @click="spCopy" :disabled="!spGenerated">一键复制</el-button>
+        <el-button type="primary" @click="spExport" :disabled="!spGenerated">导出方案</el-button>
+      </span>
+    </template>
+  </el-dialog>
+  <el-dialog v-model="fullDialogVisible" :title="fullTitle" width="700px" top="5vh">
+    <div class="full-content">{{ fullContent }}</div>
+    <template #footer><el-button @click="fullDialogVisible=false">关闭</el-button></template>
+  </el-dialog>
+  <el-dialog v-model="editDialogVisible" :title="editMode==='create'?'新增知识条目':'编辑知识条目'" width="700px" top="5vh">
+    <el-form :model="editForm" label-width="50px"><el-form-item label="标题"><el-input v-model="editForm.title" /></el-form-item><el-form-item label="标签"><el-input v-model="editForm.tags" placeholder="逗号分隔" /></el-form-item><el-form-item label="内容"><el-input v-model="editForm.content" type="textarea" :rows="14" /></el-form-item></el-form>
+    <template #footer><el-button @click="editDialogVisible=false">取消</el-button><el-button type="primary" @click="saveKnowledge" :loading="saving">{{ editMode==='create'?'创建':'保存' }}</el-button></template>
+  </el-dialog>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/element-plus@2.6.1/dist/index.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9/dist/leaflet.js"></script>
+<script>
+const { createApp, ref, reactive, computed, nextTick, onMounted, defineComponent } = Vue;
+const API = 'http://127.0.0.1:8765/api';
+
+// ============ 城市/机场坐标 ============
+const AIRPORT_COORDS = {
+  '上海浦东国际机场': [31.1443, 121.8083],
+  '上海虹桥国际机场': [31.1978, 121.3363],
+  '新加坡樟宜国际机场': [1.3644, 103.9915],
+  '北京首都国际机场': [40.0799, 116.6031],
+  '广州白云国际机场': [23.3924, 113.2988],
+};
+
+// ============ 保障方坐标（提供方→AOG地图用） ============
+const PROVIDER_COORDS = {
+  'KLm': [52.3105, 4.7683],
+  '汉莎': [50.0333, 8.5706],
+  '国泰': [22.3080, 113.9185],
+};
+
+// ============ 任务数据 ============
+const MOCK_TASKS = [
+  {id:'AOG-2026-0706-001',flight:'HO1234',reg:'B-8321',aircraftModel:'A321-211',engineModel:'CFM56-5B3/P',aogLevel:1,airportCN:'上海浦东',iataCode:'PVG',faultDesc:'雷达罩前缘分层损伤，损伤区域约15cm×8cm，已超出可保留放行标准',neededBy:'7月7日 20:00',nextFlight:'HO1235 | 7月7日 22:30',faultType:'雷达罩分层损伤',partNo:'P/N 700-001-01',priority:'紧急',status:'进行中',currentNode:'汉莎法兰克福求援',foundTime:'07-06 06:15',location:'上海浦东国际机场',plan:'已确认故障，本场无备件。已启动虹桥调配，同步向汉莎法兰克福发送求援邮件。预计法兰克福响应时间 4-6h。',checklistNodes:[{name:'雷达罩故障确认',done:true,active:false},{name:'虹桥调配',done:true,active:false},{name:'汉莎法兰克福求援',done:false,active:true},{name:'运输报关',done:false,active:false},{name:'运输监控',done:false,active:false},{name:'收尾结案',done:false,active:false}]},
+  {id:'AOG-2026-0706-002',flight:'HO1887',reg:'B-8156',aircraftModel:'A320-214',engineModel:'CFM56-5B4/P',aogLevel:2,airportCN:'上海虹桥',iataCode:'SHA',faultDesc:'左发引气系统超温，引气温度偏高至285°C，需更换引气活门',neededBy:'7月7日 06:00',nextFlight:'HO1888 | 7月7日 08:15',faultType:'发动机引气超温',partNo:'P/N CFM56-7B-001',priority:'紧急',status:'进行中',currentNode:'虹桥调配',foundTime:'07-06 08:40',location:'上海虹桥国际机场',plan:'发动机引气系统故障，需更换引气活门。虹桥仓库有备件，已安排调配至浦东安装点。',checklistNodes:[{name:'故障确认与排故方案',done:true,active:false},{name:'虹桥调配',done:false,active:true},{name:'部件更换与测试',done:false,active:false},{name:'收尾结案',done:false,active:false}]},
+  {id:'AOG-2026-0705-003',flight:'HO2310',reg:'B-8267',aircraftModel:'B787-9',engineModel:'Genx-1B76',aogLevel:2,airportCN:'新加坡樟宜',iataCode:'SIN',faultDesc:'APU启动后无法稳定运转，约30秒后自动关车，故障代码APU-2201',neededBy:'7月7日 23:00',nextFlight:'HO2311 | 7月8日 01:30',faultType:'APU故障',partNo:'P/N APS3200-001',priority:'高',status:'进行中',currentNode:'运输报关',foundTime:'07-05 14:20',location:'新加坡樟宜国际机场',plan:'境外新加坡外站APU故障，已向汉莎新加坡求援。正在办理清关文件，预计2天内完成更换。',checklistNodes:[{name:'故障确认',done:true,active:false},{name:'求援新加坡外站',done:true,active:false},{name:'运输报关',done:false,active:true},{name:'运输监控',done:false,active:false},{name:'收尾结案',done:false,active:false}]},
+  {id:'AOG-2026-0705-004',flight:'HO1602',reg:'B-8302',aircraftModel:'B787-9',engineModel:'Genx-1B76',aogLevel:3,airportCN:'北京首都',iataCode:'PEK',faultDesc:'前起落架收放位置指示异常，传感器信号不稳定，间歇性触发警告',neededBy:'7月6日 06:00',nextFlight:'HO1603 | 7月6日 08:20',faultType:'前起落架指示异常',partNo:'P/N NLG-001',priority:'高',status:'已完成',currentNode:'收尾结案',foundTime:'07-05 09:10',location:'北京首都国际机场',plan:'起落架传感器故障，已更换传感器并完成测试。飞机已放行。',checklistNodes:[{name:'故障确认',done:true,active:false},{name:'部件更换',done:true,active:false},{name:'测试与放行',done:true,active:false},{name:'收尾结案',done:true,active:false}]},
+  {id:'AOG-2026-0706-005',flight:'HO2901',reg:'B-8401',aircraftModel:'A320-214',engineModel:'V2500-A5',aogLevel:2,airportCN:'广州白云',iataCode:'CAN',faultDesc:'右驾驶位风挡外层玻璃裂纹，长度约20cm，未穿透，存在进一步扩展风险',neededBy:'7月7日 12:00',nextFlight:'HO2902 | 7月7日 14:40',faultType:'风挡玻璃裂纹',partNo:'P/N WS-737-001',priority:'紧急',status:'进行中',currentNode:'故障确认与排故方案',foundTime:'07-06 10:55',location:'广州白云国际机场',plan:'驾驶舱风挡外层裂纹，未穿透。正在评估是否可办理保留放行，同步准备更换方案和备件查询。',checklistNodes:[{name:'故障确认与排故方案',done:false,active:true},{name:'备件调配',done:false,active:false},{name:'更换与测试',done:false,active:false},{name:'收尾结案',done:false,active:false}]},
+];
+
+// ============ MEL保留历史（Demo模拟数据） ============
+const MOCK_MEL_HISTORY = [
+  {reg:'B-8321',partNo:'P/N 700-001-01',faultType:'雷达罩分层损伤',history:'2025-12-03 浦东PVG，雷达罩分层8cm×5cm，办理MEL保留放行，限飞3天。后续在虹桥完成更换。',canDefer:true,condition:'损伤面积≤10cm×10cm可保留'},
+  {reg:'B-8156',partNo:'P/N CFM56-7B-001',faultType:'发动机引气超温',history:'无MEL保留记录',canDefer:false,condition:''},
+  {reg:'B-8401',partNo:'P/N WS-737-001',faultType:'风挡玻璃裂纹',history:'2025-08-15 广州CAN，风挡外层裂纹15cm，办理MEL保留放行，限飞5天。后续更换完成。',canDefer:true,condition:'仅外层裂纹且未穿透内层可保留'},
+  {reg:'B-8267',partNo:'P/N APS3200-001',faultType:'APU故障',history:'2025-11-20 新加坡SIN，APU启动故障，办理MEL保留放行（APU不可用），限飞10天。',canDefer:true,condition:'APU不可用可保留，需确认外站有无APU替代保障'},
+];
+
+// ============ RAG案例库（Demo历史案例+经验教训） ============
+const MOCK_RAG_CASES = [
+  {id:'CASE-2025-001',faultType:'雷达罩分层损伤',partNo:'P/N 700-001-01',aircraftModel:'A321-211',site:'上海浦东',iataCode:'PVG',aogLevel:1,date:'2025-06-12',summary:'雷达罩分层损伤12cm×7cm，超出可保留标准。虹桥调配成功，更换后放行。总耗时4h30min。',tags:['雷达罩','虹桥调配','A321'],lessons:[{category:'供应商',label:'汉莎德国AOG级别确认',content:'向汉莎德国求援时，必须单独邮件确认本次为AOG级别保障，否则汉莎默认按普通处理，仓库17:00后才开始出库。建议在求援邮件标题中直接标注"AOG PRIORITY"。'},{category:'物流',label:'浦东陆运时效',content:'虹桥→浦东陆运非高峰时段约1.5h，早晚高峰可能延长至2.5h，需提前沟通物流公司预留高峰时段车辆。'}]},
+  {id:'CASE-2025-002',faultType:'发动机引气超温',partNo:'P/N CFM56-7B-001',aircraftModel:'A320-214',site:'上海虹桥',iataCode:'SHA',aogLevel:2,date:'2025-03-08',summary:'左发引气活门故障，虹桥仓库有现件，更换后测试通过。总耗时2h15min。',tags:['引气活门','虹桥仓库','A320'],lessons:[{category:'航材',label:'引气活门常备建议',content:'CFM56-7B引气活门故障率较高，建议虹浦两场均常备至少1件。本次虹桥有件避免了从外站调配。'}]},
+  {id:'CASE-2025-003',faultType:'APU故障',partNo:'P/N APS3200-001',aircraftModel:'B787-9',site:'新加坡樟宜',iataCode:'SIN',aogLevel:2,date:'2025-11-20',summary:'APU启动故障代码APU-2201，办理MEL保留放行（APU不可用），限飞10天。回基地后完成更换。',tags:['APU','MEL保留','新加坡','B787'],lessons:[{category:'外站',label:'新加坡站点特殊要求',content:'新加坡樟宜机场对APU不可用放行有额外检查要求，需提前联系新加坡CAAS确认放行许可。SIN驻外维修代理联系人为王工，电话需提前确认值班情况。'},{category:'MEL',label:'787 APU不可用放行条件',content:'787 APU不可用MEL保留需满足：①确认外站有APU替代保障能力 ②确认航路ETOPS不受影响 ③MEL保留期限不超过10天。'}]},
+  {id:'CASE-2025-004',faultType:'风挡玻璃裂纹',partNo:'P/N WS-737-001',aircraftModel:'A320-214',site:'广州白云',iataCode:'CAN',aogLevel:2,date:'2025-08-15',summary:'驾驶舱风挡外层裂纹15cm，未穿透内层。办理MEL保留放行，限飞5天。回基地后更换完成。',tags:['风挡','MEL保留','广州','A320'],lessons:[{category:'MEL',label:'风挡裂纹保留标准',content:'外层裂纹未穿透内层时可办理保留，但需每48h检查裂纹扩展情况。需航空公司工程部门出具保留意见和检查方案。'}]},
+  {id:'CASE-2025-005',faultType:'雷达罩分层损伤',partNo:'P/N 700-001-01',aircraftModel:'A320-214',site:'墨尔本',iataCode:'MEL',aogLevel:1,date:'2025-01-18',summary:'墨尔本外站雷达罩损伤，向汉莎德国求援成功，DHL航空货运3天到件，更换后放行。总耗时4天。',tags:['雷达罩','汉莎德国','墨尔本','DHL','洲际'],lessons:[{category:'供应商',label:'汉莎德国周末处理',content:'汉莎德国周末仅值班人员处理，如周末发求援邮件需同时电话联系值班热线（非邮件自动回复的号码）。'},{category:'物流',label:'墨尔本周末清关',content:'墨尔本MEL站点周末清关需提前预约，否则顺延至周一。建议在航材发出当天即联系清关代理预约。'},{category:'证书',label:'澳洲CASA证书要求',content:'澳大利亚CASA对非澳洲来源航材有额外证书验证要求，EASA Form 1需附带翻译件和等效性声明。'}]},
+];
+
+// ============ 站点区域分类（用于AOG等级自动计算） ============
+const SITE_ZONES = {
+  europe: ['LHR','CDG','FRA','AMS','MUC','ZRH','FCO','MAD','BCN','VIE','BRU','CPH','OSL','ARN','HEL','DUB','LIS','ATH','WAW','PRG','BUD'],
+  australia: ['SYD','MEL','BNE','PER','ADL','OOL','CBR','DRW'],
+  asia: ['NRT','HND','KIX','ICN','SIN','BKK','KUL','CGK','MNL','SGN','HAN','TPE','HKG','MFM','DEL','BOM','DXB','DOH','AUH'],
+};
+function getSiteZone(iataCode) {
+  const code = (iataCode||'').toUpperCase();
+  if (SITE_ZONES.europe.includes(code)) return 'europe';
+  if (SITE_ZONES.australia.includes(code)) return 'australia';
+  if (SITE_ZONES.asia.includes(code)) return 'asia';
+  if (code === 'PVG' || code === 'SHA' || code === 'PEK' || code === 'CAN' || code === 'CTU' || code === 'SZX' || code === 'XMN' || code === 'WUH' || code === 'CKG' || code === 'KMG' || code === 'HAK' || code === 'SYX' || code === 'TNA' || code === 'XIY' || code === 'NKG' || code === 'HGH' || code === 'TAO' || code === 'DLC' || code === 'CSX' || code === 'URC' || code === 'HRB' || code === 'SHE') return 'domestic';
+  return 'international';
+}
+
+// ============ ChatPanel 组件 ============
+const ChatPanel = {
+  props: ['chatReady','chatMessages','chatLoading','taskContext','cfgApiKey','cfgApiBase','cfgModel','cfgMsg'],
+  emits: ['send','save-config','update:cfgApiKey','update:cfgApiBase','update:cfgModel'],
+  template: `
+    <div class="chat-panel">
+      <div class="chat-header"><span>AI 助手</span><span class="chat-status"><span :class="chatReady?'status-dot-live':'status-dot-off'"></span>{{ chatReady ? '在线' : '未配置' }}</span></div>
+      <div class="chat-messages" ref="msgContainer" v-if="chatReady">
+        <div v-for="(m,i) in chatMessages" class="msg" :class="[m.role, m.streaming?'streaming':'']">
+          <div class="avatar" v-if="m.role==='assistant'" style="order:0">AI</div>
+          <div class="bubble" :style="{order:1}">{{ m.content }}<span v-if="m.streaming" style="display:inline-block;width:4px;height:12px;background:#409eff;margin-left:2px;animation:blink 1s infinite"></span></div>
+          <div class="avatar" v-if="m.role==='user'" style="order:2">我</div>
+        </div>
+        <div v-if="chatMessages.length===0" style="text-align:center;color:#c0c4cc;padding:30px 0;font-size:12px">向 AI 助手提问</div>
+      </div>
+      <div class="chat-config" v-if="!chatReady">
+        <div style="font-size:12px;color:#606266;margin-bottom:8px;text-align:left">配置 AI 对话 API</div>
+        <input :value="cfgApiKey" @input="$emit('update:cfgApiKey',$event.target.value)" placeholder="API Key (必填)" type="password">
+        <input :value="cfgApiBase" @input="$emit('update:cfgApiBase',$event.target.value)" placeholder="API Base URL (默认 OpenAI)">
+        <input :value="cfgModel" @input="$emit('update:cfgModel',$event.target.value)" placeholder="模型名称 (如 gpt-4o-mini)">
+        <button @click="$emit('save-config')">保存配置</button>
+        <div v-if="cfgMsg" style="margin-top:6px;color:#e6a23c;font-size:11px">{{ cfgMsg }}</div>
+      </div>
+      <div class="chat-input-box" v-if="chatReady">
+        <input :value="chatInputVal" @input="chatInputVal=$event.target.value" placeholder="输入问题..." @keyup.enter="$emit('send',chatInputVal);chatInputVal=''" :disabled="chatLoading">
+        <button @click="$emit('send',chatInputVal);chatInputVal=''" :disabled="chatLoading || !chatInputVal.trim()">{{ chatLoading ? '...' : '发送' }}</button>
+      </div>
+    </div>
+  `,
+  data(){ return {chatInputVal:''} }
+};
+
+const app = createApp({
+  components: { ChatPanel },
+  setup() {
+    // ===== Common =====
+    const activeTab = ref('monitor');
+    const mockTasks = ref(MOCK_TASKS);
+    const listFilter = ref('all');
+    const viewMode = ref('list');
+    const filteredTasks = computed(() => {
+      if (listFilter.value === 'urgent') return mockTasks.value.filter(t => t.priority === '紧急');
+      if (listFilter.value === 'active') return mockTasks.value.filter(t => t.status === '进行中');
+      return mockTasks.value;
+    });
+    const tasksActive = computed(() => mockTasks.value.filter(t => t.status === '进行中').length);
+    const tasksUrgent = computed(() => mockTasks.value.filter(t => t.priority === '紧急').length);
+    function filterBtnStyle(f) { return {background:listFilter.value===f?'#fff':'transparent',border:'none',padding:'4px 12px',borderRadius:'5px',cursor:'pointer',fontSize:'12px',boxShadow:listFilter.value===f?'0 1px 2px rgba(0,0,0,.08)':'none'}; }
+
+    // ===== Map =====
+    const mapInstance = ref(null);
+    const mapMarkers = ref([]);
+    const mapInitialized = ref(false);
+
+    function initMapIfNeeded() {
+      if (viewMode.value !== 'map' || mapInitialized.value) return;
+      nextTick(() => {
+        const el = document.getElementById('aogMap');
+        if (!el || el._leaflet_id) return;
+        const map = L.map('aogMap', {center:[32,113], zoom:5, zoomControl:true, attributionControl:false});
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18}).addTo(map);
+
+        // 添加图例
+        const legend = L.control({position:'bottomright'});
+        legend.onAdd = function() {
+          const div = L.DomUtil.create('div','map-legend');
+          div.innerHTML = '<div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span> 紧急 · 进行中</div>'+
+            '<div class="legend-item"><span class="legend-dot" style="background:#f97316"></span> 高 · 进行中</div>'+
+            '<div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> 已完成</div>'+
+            '<div class="legend-item"><span class="legend-line" style="background:#94a3b8;border-top:2px dashed #94a3b8"></span> 调配路线</div>';
+          return div;
+        };
+        legend.addTo(map);
+
+        // 标记任务
+        const markers = [];
+        filteredTasks.value.forEach(t => {
+          const coords = AIRPORT_COORDS[t.location];
+          if (!coords) return;
+          const color = t.priority === '紧急' ? '#ef4444' : (t.status === '已完成' ? '#22c55e' : '#f97316');
+          const icon = L.divIcon({html:`<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25)"></div>`,className:'',iconSize:[14,14],iconAnchor:[7,7]});
+          const marker = L.marker(coords, {icon}).addTo(map);
+          const popupHTML = `<div class="aog-popup">
+            <div class="pop-title">${t.id} · ${t.reg}</div>
+            <div class="pop-row"><span class="pop-lbl">航班</span><span class="pop-val">${t.flight}</span></div>
+            <div class="pop-row"><span class="pop-lbl">故障</span><span class="pop-val">${t.faultType}</span></div>
+            <div class="pop-row"><span class="pop-lbl">等级</span><span class="pop-val">Lv${t.aogLevel}</span></div>
+            <div class="pop-row"><span class="pop-lbl">地点</span><span class="pop-val">${t.airportCN}（${t.iataCode}）</span></div>
+            <div class="pop-plan">${t.plan}</div>
+            <div class="pop-action"><a href="javascript:void(0)">查看详情 →</a></div>
+          </div>`;
+          marker.bindPopup(popupHTML);
+          marker.on('click', () => { selectTask(t); });
+          markers.push(marker);
+        });
+        mapMarkers.value = markers;
+        mapInstance.value = map;
+        mapInitialized.value = true;
+
+        // 适配边界
+        if (markers.length) {
+          const bounds = L.latLngBounds(markers.map(m => m.getLatLng()));
+          map.fitBounds(bounds, {padding:[40,40]});
+        }
+
+        // 绘制调配路线（浦东 ↔ 虹桥）
+        const pvg = AIRPORT_COORDS['上海浦东国际机场'];
+        const sha = AIRPORT_COORDS['上海虹桥国际机场'];
+        L.polyline([pvg, sha], {color:'#94a3b8',weight:2,dashArray:'8 4'}).addTo(map);
+        // 标签
+        L.marker([(pvg[0]+sha[0])/2, (pvg[1]+sha[1])/2], {
+          icon: L.divIcon({html:'<div style="font-size:9px;color:#64748b;background:rgba(255,255,255,.8);padding:0 3px;border-radius:2px;white-space:nowrap">调配路线</div>',className:'',iconSize:[60,14],iconAnchor:[30,7]})
+        }).addTo(map);
+      });
+    }
+
+    // ===== rec-panel 运输进度地图 =====
+    const recMapInstance = ref(null);
+    const recMapReady = ref(false);
+
+    const ROUTE_COLORS = ['#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6'];
+
+    function getAogCoord(wbTaskData) {
+      if (!wbTaskData) return null;
+      const locKey = wbTaskData.location;
+      if (locKey && AIRPORT_COORDS[locKey]) return AIRPORT_COORDS[locKey];
+      const code = wbTaskData.iataCode;
+      if (code) {
+        for (const [k, v] of Object.entries(AIRPORT_COORDS)) {
+          if (k.includes(code)) return v;
+        }
+      }
+      return null;
+    }
+
+    function getProviderCoord(sol) {
+      if (!sol || !sol.provider) return null;
+      if (PROVIDER_COORDS[sol.provider]) return PROVIDER_COORDS[sol.provider];
+      if (sol.origin) {
+        const code = sol.origin.match(/\b([A-Z]{3})\b/);
+        if (code) {
+          for (const [k, v] of Object.entries(AIRPORT_COORDS)) {
+            if (k.includes(code[1])) return v;
+          }
+        }
+      }
+      return null;
+    }
+
+    function initRecMap() {
+      nextTick(() => {
+        const el = document.getElementById('recMap');
+        if (!el || !wbTask.value || !wbSolutions.value.length) return;
+
+        // 销毁旧地图
+        if (recMapInstance.value) {
+          recMapInstance.value.remove();
+          recMapInstance.value = null;
+        }
+
+        const aogCoord = getAogCoord(wbTask.value);
+        if (!aogCoord) return;
+
+        const map = L.map('recMap', {
+          center: aogCoord,
+          zoom: 2,
+          zoomControl: true,
+          attributionControl: false
+        });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18}).addTo(map);
+
+        const bounds = [aogCoord];
+        const activeSols = wbSolutions.value.filter(s => s.status === 'active' || s.status === 'pending' || !s.status);
+
+        activeSols.forEach((sol, i) => {
+          const provCoord = getProviderCoord(sol);
+          const color = ROUTE_COLORS[i % ROUTE_COLORS.length];
+
+          if (provCoord) {
+            bounds.push(provCoord);
+
+            // 弧线：提供方 → AOG 发生地
+            const midLat = (provCoord[0] + aogCoord[0]) / 2;
+            const midLng = (provCoord[1] + aogCoord[1]) / 2;
+            const curve = [
+              provCoord,
+              [midLat + (Math.abs(aogCoord[1]-provCoord[1])*0.15), midLng],
+              aogCoord
+            ];
+
+            L.polyline(curve, {
+              color: color,
+              weight: 2.5,
+              opacity: 0.7,
+              dashArray: (sol.status === 'pending' ? '6 3' : null)
+            }).addTo(map);
+
+            // 提供方标记
+            const provIcon = L.divIcon({
+              html: `<div class="rec-map-marker" style="background:${color}"></div>`,
+              className: '',
+              iconSize: [12, 12],
+              iconAnchor: [6, 6]
+            });
+            L.marker(provCoord, {icon: provIcon}).addTo(map)
+              .bindPopup(`<div class="rec-map-popup"><div class="rmp-title">${sol.provider} · ${sol.origin||''}</div><div class="rmp-row"><span class="rmp-lbl">方案</span><span class="rmp-val">${sol.id} ${sol.method}</span></div><div class="rmp-row"><span class="rmp-lbl">运输</span><span class="rmp-val">${sol.transport}</span></div></div>`);
+
+            // 线路标签（中点）
+            const labelLat = (provCoord[0] + aogCoord[0]) / 2 + (Math.abs(aogCoord[1]-provCoord[1])*0.08);
+            const labelLng = (provCoord[1] + aogCoord[1]) / 2;
+            L.marker([labelLat, labelLng], {
+              icon: L.divIcon({
+                html: `<div style="font-size:10px;color:${color};background:rgba(255,255,255,.85);padding:1px 5px;border-radius:3px;white-space:nowrap;font-weight:600">${sol.id} ${sol.provider}</div>`,
+                className: '',
+                iconSize: [100, 16],
+                iconAnchor: [50, 8]
+              })
+            }).addTo(map);
+          } else {
+            // 无坐标时在起点附近加虚线指示
+            const fallback = [aogCoord[0]+0.5, aogCoord[1]+0.5];
+            bounds.push(fallback);
+            L.polyline([fallback, aogCoord], {
+              color: '#94a3b8',
+              weight: 1.5,
+              dashArray: '4 3',
+              opacity: 0.5
+            }).addTo(map);
+          }
+        });
+
+        // AOG 发生地大标
+        const aogIcon = L.divIcon({
+          html: '<div style="width:16px;height:16px;border-radius:50%;background:#ef4444;border:3px solid #fff;box-shadow:0 2px 8px rgba(239,68,68,.4);animation:pulse 1.5s infinite"></div>',
+          className: '',
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+        });
+        L.marker(aogCoord, {icon: aogIcon}).addTo(map)
+          .bindPopup(`<div class="rec-map-popup"><div class="rmp-title">AOG 发生地</div><div class="rmp-row"><span class="rmp-lbl">地点</span><span class="rmp-val">${wbTask.value.airportCN}（${wbTask.value.iataCode}）</span></div><div class="rmp-row"><span class="rmp-lbl">机号</span><span class="rmp-val">${wbTask.value.reg}</span></div></div>`);
+
+        if (bounds.length >= 2) {
+          map.fitBounds(L.latLngBounds(bounds), {padding: [30, 30]});
+        }
+
+        recMapInstance.value = map;
+        recMapReady.value = true;
+      });
+    }
+
+    // ===== Monitor =====
+    const selectedTask = ref(null);
+    function selectTask(t) { selectedTask.value = t; }
+
+    // ===== Chat =====
+    const chatReady = ref(false);
+    const chatLoading = ref(false);
+    const chatMessages = ref([]);
+    const chatMsgContainer = ref(null);
+    const cfgApiKey = ref('');
+    const cfgApiBase = ref('https://api.openai.com/v1');
+    const cfgModel = ref('gpt-4o-mini');
+    const cfgMsg = ref('');
+
+    async function checkChatConfig() {
+      try { const r = await axios.get(`${API}/chat/config`); chatReady.value = r.data.ready; } catch(e) { chatReady.value = false; }
+    }
+    async function saveChatConfig() {
+      if (!cfgApiKey.value.trim()) { cfgMsg.value = '请填写 API Key'; return; }
+      cfgMsg.value = '';
+      try { await axios.post(`${API}/chat/config`, {api_key:cfgApiKey.value.trim(),api_base:cfgApiBase.value.trim(),model:cfgModel.value.trim()}); await checkChatConfig(); } catch(e) { cfgMsg.value = e.response?.data?.detail || '配置失败'; }
+    }
+    async function sendChat(inputVal) {
+      if (typeof inputVal !== 'string') inputVal = chatInput.value;
+      if (!inputVal || !inputVal.trim() || chatLoading.value) return;
+      const q = inputVal.trim();
+      chatMessages.value.push({role:'user',content:q});
+      const aiMsg = {role:'assistant',content:'',streaming:true}; chatMessages.value.push(aiMsg); chatLoading.value = true;
+      const taskCtx = selectedTask.value ? {id:selectedTask.value.id,flight:selectedTask.value.flight,reg:selectedTask.value.reg,aircraftModel:selectedTask.value.aircraftModel,engineModel:selectedTask.value.engineModel,aogLevel:selectedTask.value.aogLevel,airportCN:selectedTask.value.airportCN,iataCode:selectedTask.value.iataCode,faultDesc:selectedTask.value.faultDesc,neededBy:selectedTask.value.neededBy,nextFlight:selectedTask.value.nextFlight,faultType:selectedTask.value.faultType,partNo:selectedTask.value.partNo,location:selectedTask.value.location,currentNode:selectedTask.value.currentNode,plan:selectedTask.value.plan,priority:selectedTask.value.priority} : null;
+      try {
+        const msgs = chatMessages.value.filter(m => !m.streaming || m.content).map(m => ({role:m.role,content:m.content})); msgs.pop();
+        const resp = await fetch(`${API}/chat`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:msgs,task_context:taskCtx,stream:true})});
+        const reader = resp.body.getReader(); const decoder = new TextDecoder(); let buffer = '';
+        while (true) { const {done,value} = await reader.read(); if (done) break; buffer += decoder.decode(value,{stream:true}); const lines = buffer.split('\n'); buffer = lines.pop()||''; for (const line of lines) { if (!line.startsWith('data: ')) continue; try { const data = JSON.parse(line.substring(6)); if (data.type==='token') aiMsg.content += data.content; else if (data.type==='done') { aiMsg.content = data.content; aiMsg.streaming = false; } else if (data.type==='error') { aiMsg.content='错误: '+data.content; aiMsg.streaming = false; } } catch(e) {} } await nextTick(); }
+        aiMsg.streaming = false;
+      } catch(e) { aiMsg.content = '请求失败: ' + (e.message||'网络错误'); aiMsg.streaming = false; }
+      chatLoading.value = false;
+    }
+
+    // ===== Workbench v2 =====
+    const wbSelectedTaskId = ref(''); const wbTask = ref(null);
+    const wbPhases = ref([]); const wbActivePhaseId = ref(null); const wbActiveNodeId = ref('');
+    const wbActiveNode = computed(() => {
+      if (!wbActiveNodeId.value) return null;
+      for (const p of wbPhases.value)
+        for (const n of p.nodes)
+          if (n.id === wbActiveNodeId.value) return n;
+      return null;
+    });
+    const activePhase = computed(() => {
+      if (!wbActivePhaseId.value) return null;
+      return wbPhases.value.find(p => p.id === wbActivePhaseId.value) || null;
+    });
+    const wbDoneNodes = reactive(new Set()); const wbSkippedNodes = reactive(new Set());
+
+    // ===== Agent Chat =====
+    const agentChatMessages = ref([]); const agentChatInput = ref(''); const agentChatLoading = ref(false);
+    const agentWelcomeShown = ref(false);
+    function showAgentWelcome() {
+      if (agentWelcomeShown.value) return;
+      agentWelcomeShown.value = true;
+      agentChatMessages.value.push({role:'assistant',content:'',html:'已启用实时保障更新能力。您可以直接告诉我方案变更信息，例如：<br>• <b>方案1 数量改为3件</b><br>• <b>方案2 来源改为汉莎法兰克福</b><br>• <b>方案1 运输方式改为空运，预计到达 7月8日 14:00</b><br>• <b>新增方案3：供应商=国泰，发货地=香港HKG</b>',streaming:false});
+    }
+    function parseSolIndex(text) {
+      let idx = -1;
+      const m1 = text.match(/方案(\d+)/); if(m1) idx = parseInt(m1[1])-1;
+      const m2 = text.match(/第[一二三四五六七八九十]+个/); if(m2) { const map={一:0,二:1,三:2,四:3,五:4,六:5,七:6,八:7,九:8,十:9}; idx = (map[m2[0][1]] ?? -1); }
+      const m3 = text.match(/方案([一二三四五六七八九十])/); if(m3) { const map={一:0,二:1,三:2,四:3,五:4,六:5,七:6,八:7,九:8,十:9}; idx = map[m3[1]] ?? -1; }
+      return idx;
+    }
+    function tryLocalUpdate(q) {
+      if (!wbSolutions.value || !wbSolutions.value.length) return null;
+      const sols = wbSolutions.value;
+      const idx = parseSolIndex(q);
+      if (idx < 0 || idx >= sols.length) return null;
+      const sol = sols[idx];
+      let updated = [], logs = [];
+      // 数量
+      const qtyM = q.match(/数量(?:改为|改成|=)?\s*(\d+)\s*(件|EA|个)?/i);
+      if (qtyM && sol.parts && sol.parts.length) {
+        const newQty = qtyM[1] + (qtyM[2]||'EA');
+        sol.parts.forEach(p => p.qty = newQty);
+        updated.push('数量');
+        logs.push(`方案${idx+1} 各件号数量统一设为 ${newQty}`);
+      }
+      // 来源/供应商
+      const provM = q.match(/(?:来源|供应商|provider)(?:改为|改成|=|：|:)?\s*(.+?)(?:，|\.|$)/i);
+      if (provM && provM[1].length < 20) { sol.provider = provM[1].trim(); updated.push('供应商'); logs.push(`方案${idx+1} 供应商改为 ${sol.provider}`); }
+      // 发货地
+      const origM = q.match(/(?:发货地|origin)(?:改为|改成|=|：|:)?\s*(.+?)(?:，|\.|$)/i);
+      if (origM && origM[1].length < 30) { sol.origin = origM[1].trim(); updated.push('发货地'); logs.push(`方案${idx+1} 发货地改为 ${sol.origin}`); }
+      // 运输方式
+      const transM = q.match(/(?:运输|运输方式|transport)(?:改为|改成|=|：|:)?\s*(.+?)(?:，|\.|$)/i);
+      if (transM && transM[1].length < 20) { sol.transport = transM[1].trim(); updated.push('运输方式'); logs.push(`方案${idx+1} 运输方式改为 ${sol.transport}`); }
+      // 预计到达
+      const etaM = q.match(/(?:预计到达|预计抵达|ETA?|到达时间|arrive(?:Time)?)(?:改为|改成|=|：|:)?\s*(.+?)(?:，|\.|$)/i);
+      if (etaM && etaM[1].length < 30) { sol.arriveTime = etaM[1].trim(); updated.push('预计到达'); logs.push(`方案${idx+1} 预计到达改为 ${sol.arriveTime}`); }
+      // 物流节点状态
+      const nodeM = q.match(/(?:节点\d?|第?\d+步)?\s*(物流抵达提货地|已提货出发|交接|已到达|已交付)(?:状态)?(?:改为|改成|=)?\s*(已完成|完成|进行中|pending|done|进行|待确认)/i);
+      if (nodeM && sol.nodes) {
+        const nodeName = nodeM[1]; const newStatus = nodeM[2];
+        const statusMap = {已完成:'done',完成:'done',done:'done',进行中:'processing',进行:'processing',待确认:'pending',pending:'pending'};
+        const s = statusMap[newStatus] || 'pending';
+        const node = sol.nodes.find(n => n.name.includes(nodeName));
+        if (node) { node.status = s; node.time = new Date().toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}); updated.push('节点状态'); logs.push(`方案${idx+1} 节点「${nodeName}」状态改为 ${s}`); }
+      }
+      if (updated.length) return logs.join('；');
+      // 新增方案
+      const addM = q.match(/新增方案(\d+)?|添加方案(\d+)?/i);
+      if (addM && q.includes('供应商') && q.includes('发货地')) {
+        const newProv = q.match(/供应商[=：:]?\s*(.+?)(?:，|,|发货|$)/);
+        const newOrig = q.match(/发货地[=：:]?\s*(.+?)(?:，|,|$)/);
+        if (newProv && newOrig) {
+          const newSol = {
+            id: 'S' + (sols.length+1), status: 'pending',
+            parts: [{pn:'P/N 待确认',qty:'1EA'}],
+            method: newProv[1].trim()+'保障件', provider: newProv[1].trim(),
+            origin: newOrig[1].trim(), transport:'待确认', departTime:'待确认', arriveTime:'待确认',
+            nodes: [{name:'物流抵达提货地',status:'pending',time:'待确认'},{name:'已提货出发',status:'pending',time:'待确认'},{name:'交接',status:'pending',time:'待确认'}]
+          };
+          if (addM[1]) newSol.id = 'S' + addM[1];
+          sols.push(newSol);
+          return `已新增方案${sols.length}：${newProv[1].trim()} / ${newOrig[1].trim()}`;
+        }
+      }
+      return null;
+    }
+    async function sendAgentMessage() {
+      const q = agentChatInput.value.trim(); if (!q || agentChatLoading.value) return;
+      agentChatInput.value = ''; agentChatMessages.value.push({role:'user',content:q});
+      const aiMsg = {role:'assistant',content:'',streaming:true}; agentChatMessages.value.push(aiMsg); agentChatLoading.value = true;
+      // 尝试本地更新
+      const localResult = tryLocalUpdate(q);
+      if (localResult) {
+        aiMsg.content = localResult;
+        aiMsg.html = `<span style="color:#16a34a">${localResult}</span>`;
+        // 刷新 sol-panel 中选中卡片的 details（force reactive update）
+        if (wbActiveNodeId.value) {
+          // 重新触发 checkoutNode 以刷新详情（通过触发 activeNodeId 的重新设置）
+          const tmp = wbActiveNodeId.value; wbActiveNodeId.value = ''; nextTick(() => wbActiveNodeId.value = tmp);
+        }
+        aiMsg.streaming = false;
+        agentChatLoading.value = false;
+        nextTick(() => { const el = document.querySelector('.agent-chat-messages'); if(el) el.scrollTop = el.scrollHeight; });
+        return;
+      }
+      try {
+        const msgs = agentChatMessages.value.filter(m => !m.streaming || m.content).map(m => ({role:m.role,content:m.content})); msgs.pop();
+        const resp = await fetch(cfgApiBase+'/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfgApiKey},body:JSON.stringify({model:cfgModel,messages:[...msgs,{role:'user',content:q}],stream:true})});
+        if(!resp.ok) { aiMsg.content = '（模拟：未连接保障 API，支持的命令见上方提示）'; aiMsg.html = `<span style="color:#909399">${aiMsg.content}</span>`; aiMsg.streaming = false; agentChatLoading.value = false; return; }
+        const reader = resp.body.getReader(), dec = new TextDecoder(); let buf = '';
+        while(true){const{value,done} = await reader.read(); if(done) break; buf += dec.decode(value,{stream:true});
+          for(let i=0;i<buf.length;i++){if(buf[i]==='\n'){const line = buf.substring(0,i).trim(); buf=buf.substring(i+1); i=-1;
+            if(line.startsWith('data:')){const d = line.slice(5).trim(); if(!d || d==='[DONE]') continue;
+              try{const j = JSON.parse(d); const delta = j.choices?.[0]?.delta?.content; if(delta) aiMsg.content += delta;}catch(e){}}}}}
+        aiMsg.html = renderMarkdown(aiMsg.content); aiMsg.streaming = false;
+      } catch(e) {
+        aiMsg.content = '（模拟：暂未连接到保障 API，支持的命令见上方提示）'; aiMsg.html = `<span style="color:#909399">${aiMsg.content}</span>`; aiMsg.streaming = false;
+      }
+      agentChatLoading.value = false;
+      nextTick(() => { const el = document.querySelector('.agent-chat-messages'); if(el) el.scrollTop = el.scrollHeight; });
+    }
+
+      // ===== 保障方案 =====
+      const wbSolutions = ref([]);
+      function formatNextFlight(nextFlight) {
+        if (!nextFlight) return '';
+        // 将 "HO1235 | 7月7日 22:30" 转为 "HO1235, 7月7日 22:30"
+        return nextFlight.replace(/\s*\|\s*/g, ', ');
+      }
+      // ===== 节点确认栏配置 =====
+      const wbConfirmFields = {
+        '2.10': [ // 确认支援方信息
+          { key: 'supportParty', label: '支援方', type: 'select', options: ['汉莎法兰克福', 'KLM阿姆斯特丹', '法航巴黎', '英航伦敦', '土耳其航空伊斯坦布尔', '阿联酋航空迪拜', '国泰香港', '全日空东京', '大韩首尔'] },
+          { key: 'supportLocation', label: '发货地', type: 'text' },
+          { key: 'contactInfo', label: '联系方式', type: 'text' }
+        ],
+        '3.1': [ // 确认尺寸/重量/价值
+          { key: 'dims', label: '尺寸(CM)', type: 'text' },
+          { key: 'weight', label: '重量(KG)', type: 'text' },
+          { key: 'value', label: '货值', type: 'text' },
+          { key: 'dgClass', label: '危险品等级', type: 'select', options: ['非危险品', 'Class 1', 'Class 2', 'Class 3', 'Class 5', 'Class 9'] }
+        ],
+        '4.2': [ // 确认手提货航班
+          { key: 'flightNo', label: '航班号', type: 'text' },
+          { key: 'departAirport', label: '出发机场', type: 'text' },
+          { key: 'arriveAirport', label: '到达机场', type: 'text' },
+          { key: 'departTime', label: '出发时间', type: 'text' },
+          { key: 'arriveTime', label: '到达时间', type: 'text' },
+          { key: 'courierName', label: '运输人员', type: 'text' }
+        ],
+        '4.3': [ // 确认航空货运航班
+          { key: 'awbNo', label: '运单号', type: 'text' },
+          { key: 'carrier', label: '承运人', type: 'text' },
+          { key: 'flightNo', label: '航班号', type: 'text' },
+          { key: 'departAirport', label: '出发机场', type: 'text' },
+          { key: 'arriveAirport', label: '到达机场', type: 'text' },
+          { key: 'etd', label: 'ETD', type: 'text' },
+          { key: 'eta', label: 'ETA', type: 'text' }
+        ],
+        '4.4': [ // 确认运输报关方案
+          { key: 'customsBroker', label: '报关行', type: 'text' },
+          { key: 'customsStatus', label: '报关状态', type: 'select', options: ['待申报', '已申报', '已放行', '查验中'] },
+          { key: 'declaredValue', label: '申报货值', type: 'text' }
+        ]
+      };
+      const wbNodeConfirm = reactive({});
+      const wbConfirmApplied = reactive({});
+
+      function initNodeConfirm(nodeId) {
+        if (!wbNodeConfirm[nodeId]) {
+          wbNodeConfirm[nodeId] = {};
+          const fields = wbConfirmFields[nodeId] || [];
+          fields.forEach(f => { if (!(f.key in wbNodeConfirm[nodeId])) wbNodeConfirm[nodeId][f.key] = ''; });
+          wbNodeConfirm[nodeId]._updated = false;
+        }
+      }
+
+      function onConfirmChanged(nodeId) {
+        if (wbNodeConfirm[nodeId]) wbNodeConfirm[nodeId]._updated = true;
+      }
+
+      function applyConfirm(nodeId) {
+        const confirm = wbNodeConfirm[nodeId];
+        if (!confirm) return;
+        wbConfirmApplied[nodeId] = JSON.parse(JSON.stringify(confirm));
+        delete wbConfirmApplied[nodeId]._updated;
+        confirm._updated = false;
+        refreshDependentNodes(nodeId);
+      }
+
+      function refreshDependentNodes(changedNodeId) {
+        if (changedNodeId === '2.10') {
+          const loc = wbNodeConfirm['2.10']?.supportLocation;
+          if (loc) {
+            initNodeConfirm('4.2');
+            wbNodeConfirm['4.2'].departAirport = loc;
+            initNodeConfirm('4.3');
+            wbNodeConfirm['4.3'].departAirport = loc;
+            updateNodeAnswerForTransport(loc);
+          }
+        }
+        if (changedNodeId === '3.1') {
+          const dims = wbNodeConfirm['3.1']?.dims;
+          const weight = wbNodeConfirm['3.1']?.weight;
+          const oversized = dims ? isHandCarryOversized(dims) : false;
+          const heavy = weight && parseFloat(weight) > 32;
+          if (oversized || heavy) {
+            ElementPlus.ElMessage.warning('货物' + (oversized?'尺寸超限':'') + (heavy?'重量超限':'') + '，智能体已调整运输方式建议');
+          }
+          updateNodeAnswerForDimensions(oversized, heavy);
+        }
+      }
+
+      function isHandCarryOversized(dims) {
+        if (!dims) return false;
+        const parts = dims.split(/[*xX×\/]/).map(p => parseFloat(p.trim()));
+        if (parts.length < 3) return false;
+        const [l, w, h] = parts;
+        if (l > 100 || w > 100 || h > 100) return true;
+        return (l + w + h) > 158;
+      }
+
+      function updateNodeAnswerForTransport(location) {
+        const phase4 = wbPhases.find(p => p.id === '4');
+        if (!phase4) return;
+        const node42 = phase4.nodes.find(n => n.id === '4.2');
+        if (node42) {
+          node42._answer = {
+            summary: '已基于支援方发货地 ' + location + ' 更新手提货航班推荐',
+            detail: '请搜索从 ' + location + ' 前往 ' + (wbTask.value?.iataCode || '目标站') + ' 的最早直飞航班。建议优先选择上午出发的航班，预留充足提货和交运时间。',
+            data_sources: ['支援方确认结果', '航班时刻数据库'],
+            related_cases: wbCaseMatches.map(c => c.id).slice(0, 2),
+            score: 0.92
+          };
+        }
+        const node43 = phase4.nodes.find(n => n.id === '4.3');
+        if (node43) {
+          node43._answer = {
+            summary: '已基于支援方发货地 ' + location + ' 更新航空货运航班推荐',
+            detail: '请查询从 ' + location + '（支援方发货地）发往 ' + (wbTask.value?.iataCode || '目标站') + ' 的货运航班。优先选择具备主舱门的宽体机型（B777F/B747F）以适配大件货物。',
+            data_sources: ['支援方确认结果', '货运航班数据库', '机队运力数据'],
+            related_cases: wbCaseMatches.map(c => c.id).slice(0, 2),
+            score: 0.88
+          };
+        }
+      }
+
+      function updateNodeAnswerForDimensions(oversized, heavy) {
+        const phase4 = wbPhases.find(p => p.id === '4');
+        if (!phase4) return;
+        const node42 = phase4.nodes.find(n => n.id === '4.2');
+        if (node42) {
+          if (oversized || heavy) {
+            node42._answer = {
+              summary: '不建议选择手提货运输',
+              detail: (oversized ? '货物尺寸已超过手提货标准(单边≤100CM, 三边和≤158CM)，' : '') + (heavy ? '重量超过32KG/件单人携带限制，' : '') + '请优先安排航空货运。如需手提货，请将货物拆分后分多人携带。',
+              data_sources: ['货物尺寸/重量确认结果', 'IATA手提货标准'],
+              related_cases: wbCaseMatches.map(c => c.id).slice(0, 2),
+              score: 0.95
+            };
+          } else {
+            node42._answer = {
+              summary: '货物尺寸/重量在手提货可接受范围内，可安排手提货运输',
+              detail: '尺寸和重量均符合手提货标准。请在下方确认航班信息，专人携带可大幅缩短运输时间。',
+              data_sources: ['货物尺寸/重量确认结果', 'IATA手提货标准'],
+              related_cases: wbCaseMatches.map(c => c.id).slice(0, 2),
+              score: 0.90
+            };
+          }
+        }
+      }
+
+      function initSolutions() {
+        if (!wbTask.value) { wbSolutions.value = []; return; }
+        const t = wbTask.value;
+        // 模拟多航材场景：同一发货地合并，不同发货地拆分
+        wbSolutions.value = [
+          {
+            id: 'S1', status: 'active',
+            parts: [
+              { pn: 'P/N 700-001-01', qty: '1EA' },
+              { pn: 'P/N 700-001-02', qty: '2EA' }
+            ],
+            method: 'KLm保障件',
+            provider: 'KLm',
+            origin: '同城快送45',
+            transport: '待确认',
+            departTime: '待确认',
+            arriveTime: '待确认',
+            nodes: [
+              { name: '物流抵达提货地', status: 'pending', time: '待确认' },
+              { name: '已提货出发', status: 'pending', time: '待确认' },
+              { name: '交接', status: 'pending', time: '待确认' }
+            ]
+          },
+          {
+            id: 'S2', status: 'pending',
+            parts: [
+              { pn: 'P/N 800-002-01', qty: '1EA' }
+            ],
+            method: '汉莎保障件',
+            provider: '汉莎',
+            origin: '法兰克福FRA',
+            transport: '待确认',
+            departTime: '待确认',
+            arriveTime: '待确认',
+            nodes: [
+              { name: '物流抵达提货地', status: 'pending', time: '待确认' },
+              { name: '已提货出发', status: 'pending', time: '待确认' },
+              { name: '交接', status: 'pending', time: '待确认' }
+            ]
+          }
+        ];
+      }
+
+
+    const wbAuditDone = reactive({});
+    const wbAutoResult = reactive({});
+    const wbKnowledge = ref([]); const wbRules = ref([]); const wbContacts = ref([]); const wbCaseMatches = ref([]);
+    const wbRecLoading = ref(false);
+
+    // ===== 内置检查单数据（42节点 / 6阶段） =====
+    const BUILTIN_CHECKLIST = [
+      {id:1,title:'需求确认',_exp:true,nodes:[
+        {id:'1.1',title:'确认AOG级别',type:'manual',desc:'确认AOG级别为1/2/3/4级。2级以上需制定备份方案并上报主管评估。'},
+        {id:'1.2',title:'确认随机航材箱库存',type:'auto',desc:'通过机号匹配发动机型号，检索随机航材清单。'},
+        {id:'1.3',title:'确认跟机保障航材',type:'manual',desc:'与MCC确认跟机保障航材中是否有需求件号。'},
+        {id:'1.4',title:'确认外站配备航材',type:'auto',desc:'通过站点匹配外站库存数据（米兰/墨尔本/曼彻斯特）。'},
+        {id:'1.5',title:'SAP系统确认AOG标识',type:'manual',desc:'在SAP系统中确认订单已标记AOG。'},
+        {id:'1.6',title:'SAP确认需求详情',type:'manual',desc:'确认件号、数量、需求地点、原因、是否时控件、需求时间。'},
+        {id:'1.7',title:'确认互换件及上下级组件',type:'manual',desc:'与MCC确认互换件及上下级组件件号（化工品全部件号）。'},
+        {id:'1.8',title:'确认件号来源IPC',type:'manual',desc:'确认需求件号来源于IPC或其他有效文件。'},
+        {id:'1.9',title:'确认下次起飞时间',type:'auto',desc:'从航班动态中确认下次起飞时间。'},
+        {id:'1.10',title:'班组长群初始通报',type:'broadcast',desc:'通报内容需包含机号、故障原因、需求地点、需求时间和下次起飞时间、需求件号及数量、区域保障航材资源。'},
+      ]},
+      {id:2,title:'询件',_exp:true,nodes:[
+        {id:'2.1',title:'向当地所有航司发送求援邮件',type:'manual',desc:'附上件号来源文件，电话联系当地航司确认收到邮件。'},
+        {id:'2.2',title:'提交AeroXChange(KLM)',type:'cond',desc:'提交系统需求，向KLM发送需求邮件。工作时间联系Wendy，非工作时间联系CS团队。'},
+        {id:'2.3',title:'向汉莎发送求援邮件',type:'cond',desc:'参考保障预案模板发送求援邮件，附上件号来源文件。'},
+        {id:'2.4',title:'IATP平台发送AOG求援',type:'cond',desc:'通过IATP平台发送AOG求援邮件，附件号来源文件。'},
+        {id:'2.5',title:'MOOG保障件求援',type:'cond',desc:'参考保障预案模板向MOOG发送需求邮件。工作时间联系李陶，非工作时间联系MOOG AOG团队。'},
+        {id:'2.6',title:'确认OEM库存',type:'cond',desc:'无其他渠道时，确认OEM库存情况。'},
+        {id:'2.7',title:'短舱/结构件求援',type:'cond',desc:'向波音、空客、Collins、Goodrich、Safran发送求援邮件。'},
+        {id:'2.8',title:'确认证书类型',type:'manual',desc:'确认CAAC/FAA/EASA证书类型。'},
+        {id:'2.9',title:'证书审核流转',type:'audit',desc:'完成三级审核，确认证书吉祥可用。',audit_steps:['质检确认','工程技术确认','PPC确认']},
+        {id:'2.10',title:'确认支援方信息',type:'manual',desc:'确认支援方能否支援、取件地址和联系方式。'},
+      ]},
+      {id:3,title:'确认器材关键信息',_exp:true,nodes:[
+        {id:'3.1',title:'确认尺寸/重量/价值',type:'manual',desc:'记录航材尺寸、重量、价值，用于后续运输方式判断。'},
+        {id:'3.2',title:'确认是否危险品(MSDS)',type:'cond',desc:'确认是否危险品，如是需查MSDS。标记待真人执行。'},
+      ]},
+      {id:4,title:'确认运输报关方案',_exp:true,nodes:[
+        {id:'4.1',title:'确定运输方式',type:'manual',desc:'根据尺寸、重量、是否危险品选择：手提货(OBC) / 航空货运 / 专车。'},
+        {id:'4.2',title:'确认手提货航班',type:'cond',desc:'通过携程等机票购买软件确认手提货航班信息（含转机）。起飞前2小时提货准备出发。'},
+        {id:'4.3',title:'确认航空货运航班',type:'cond',desc:'通过飞常准确认航班信息。起飞前至少4小时送达货站。'},
+        {id:'4.4',title:'确认是否员工自运',type:'cond',desc:'确认库房、航线、驻外、营业部等人员可否携带。'},
+        {id:'4.5',title:'向物流单位发送邮件',type:'manual',desc:'参考保障预案模板向所有物流单位(ACS/B&H等)发送邮件。'},
+        {id:'4.6',title:'确认提货人信息',type:'manual',desc:'向物流单位确认提货人护照信息、联系电话。'},
+        {id:'4.7',title:'确认接货人信息',type:'manual',desc:'确认接货人接收地址、联系方式（驻外维修人员/维修代理/营业部/其他）。'},
+        {id:'4.8',title:'确认出口报关方案',type:'cond',desc:'优先由支援方负责报关，或物流单位负责（需额外授权及报关资料）。'},
+        {id:'4.9',title:'确认进口报关方案',type:'cond',desc:'优先由接收方负责报关，或物流单位负责（需额外授权及报关资料）。'},
+      ]},
+      {id:5,title:'保障方案监控和通报',_exp:true,nodes:[
+        {id:'5.1',title:'补全检查单+班组长群粗报',type:'broadcast',desc:'补全检查单信息后，在班组长群粗报当前进展。'},
+        {id:'5.2',title:'系统需求提交后部门群通报',type:'broadcast',desc:'SAP系统需求提交后，在部门群立即通报当地和区域内资源。'},
+        {id:'5.3',title:'保障方案确认通报',type:'broadcast',desc:'确认保障方案后，在部门群和班组长群通报。方案变更时需再次通报。'},
+        {id:'5.4',title:'提货/检查/出发通报',type:'broadcast',desc:'物流/承运人抵达提货地点后通报；航材检查正常、承运人出发后通报（需拍照确认）。'},
+        {id:'5.5',title:'航材装机/值机/登机通报',type:'cond',desc:'航材放上航班→承运人值机→承运人登机，每步在部门群通报。'},
+        {id:'5.6',title:'航班起飞/落地/提行李通报',type:'broadcast',desc:'航班起飞→落地→承运人提到行李→物流提货，每步在部门群通报。'},
+        {id:'5.7',title:'陆运每2小时通报',type:'cond',desc:'陆运运输每两小时在部门群通报一次进度。'},
+        {id:'5.8',title:'航材到达交接通报',type:'broadcast',desc:'确认航材到达并交接完成后，在部门群通报（需拍照确认）。'},
+      ]},
+      {id:6,title:'收尾',_exp:true,nodes:[
+        {id:'6.1',title:'SAP合同制定确认',type:'manual',desc:'确认SAP合同已制定。若起飞前无法完成收/发料手续，上报主管。'},
+        {id:'6.2',title:'SAP收料/发料/差异单',type:'manual',desc:'完成收料、发料，如有差异需处理差异单。'},
+        {id:'6.3',title:'确认器材归还方案',type:'manual',desc:'按KLM求援/跨境求援/非跨境三种场景分别执行归还规则。见检查单备注。'},
+      ]},
+    ];
+
+    function openWorkbench(task) { activeTab.value = 'workbench'; nextTick(() => { wbSelectedTaskId.value = task.id; onWbTaskChange(task.id); }); }
+
+    // ===== 自动计算所有Mock任务的AOG等级 =====
+    function recalcAogLevels() {
+      // 每个Mock任务预置评估参数，确保等级符合R5标准
+      const taskAssessParams = {
+        'AOG-2026-0706-001':  { iataCode:'MUC',   aircraftModel:'A321-211', isShortStop:'no',  isHPSwap:'no',  laborHours:0 },
+        'AOG-2026-0706-002':  { iataCode:'HKG',   aircraftModel:'A320-214', isShortStop:'no',  isHPSwap:'no',  laborHours:0 },
+        'AOG-2026-0705-003':  { iataCode:'SIN',   aircraftModel:'B787-9',   isShortStop:'no',  isHPSwap:'no',  laborHours:0 },
+        'AOG-2026-0705-004':  { iataCode:'PEK',   aircraftModel:'B787-9',   isShortStop:'yes', isHPSwap:'no',  laborHours:0 },
+        'AOG-2026-0706-005':  { iataCode:'CAN',   aircraftModel:'A320-214', isShortStop:'yes', isHPSwap:'no',  laborHours:0 },
+      };
+      // 新增一个4级兜底任务展示
+      if (!mockTasks.value.find(t => t.id === 'AOG-2026-0701-002')) {
+        mockTasks.value.push({
+          id:'AOG-2026-0701-002', flight:'HO6324', reg:'B-8219', aircraftModel:'A330-300', engineModel:'—',
+          aogLevel:4, airportCN:'上海浦东', iataCode:'PVG',
+          faultDesc:'前轮刹车组件磨损超标，件号BRK-330-001，非短停状态，无需虹浦互调', neededBy:'7月8日 10:00',
+          nextFlight:'HO6325 | 7月8日 14:00', faultType:'刹车组件磨损', partNo:'P/N BRK-330-001',
+          priority:'普通', status:'已完成', currentNode:'收尾结案', foundTime:'07-01 14:30',
+          location:'上海浦东国际机场',
+          plan:'刹车组件磨损超标，已安排维修。',
+          checklistNodes:[{name:'故障确认',done:true,active:false},{name:'部件更换',done:true,active:false},{name:'测试与放行',done:true,active:false},{name:'收尾结案',done:true,active:false}]
+        });
+      }
+      mockTasks.value.forEach(t => {
+        const params = taskAssessParams[t.id];
+        if (!params) return;
+        const result = calculateAogLevel(params);
+        t.aogLevel = result.level;
+        t._aogReason = result.reason;
+      });
+    }
+
+    function calculateAogLevel(form) {
+      const zone = getSiteZone(form.iataCode);
+      // 1级: 欧洲或澳洲
+      if (zone === 'europe' || zone === 'australia') {
+        return {level:1,reason:'地点为欧洲/澳洲，属于洲际AOG，触发1级保障（需制定备份方案并同步执行）'};
+      }
+      // 2级判断
+      const reasons2 = [];
+      if (zone === 'international') reasons2.push('国际站点（非欧洲/澳洲）');
+      if (form.aircraftModel === 'B787-9' && zone !== 'domestic') reasons2.push('787计划执行洲际航线');
+      if (form.isHPSwap === 'yes' && (form.laborHours||0) <= 2) reasons2.push('虹浦两场互调且拆装工时≤2h');
+      if (reasons2.length > 0) {
+        return {level:2,reason:reasons2.join('；')+'，触发2级保障（需制定备份方案，上报AOG主管）'};
+      }
+      // 3级: 短停
+      if (form.isShortStop === 'yes') {
+        return {level:3,reason:'国内外站短停AOG，触发3级保障'};
+      }
+      // 4级兜底
+      return {level:4,reason:'其他情况，触发4级保障'};
+    }
+
+    function matchMelHistory(form) {
+      return MOCK_MEL_HISTORY.find(m =>
+        m.partNo === form.partNo ||
+        m.faultType === form.faultType ||
+        m.reg === form.reg
+      ) || null;
+    }
+
+    function matchRagCases(form) {
+      return MOCK_RAG_CASES.filter(c =>
+        c.faultType === form.faultType ||
+        (c.partNo && form.partNo && c.partNo.includes(form.partNo.replace('P/N ',''))) ||
+        c.iataCode === form.iataCode
+      ).map(c => {
+        let score = 0;
+        if (c.faultType === form.faultType) score += 50;
+        if (c.iataCode === form.iataCode) score += 30;
+        if (c.aircraftModel === form.aircraftModel) score += 20;
+        return {...c, similarity: Math.min(score, 98)};
+      }).sort((a,b) => b.similarity - a.similarity);
+    }
+
+    function viewCaseDetail(c) {
+      ElementPlus.ElMessageBox.alert(
+        `<div style="text-align:left;line-height:1.8;font-size:12px">
+          <b>${c.id}</b> | ${c.date} | ${c.site} (${c.iataCode}) | ${c.aircraftModel}<br><br>
+          <b>摘要：</b>${c.summary}<br><br>
+          ${c.lessons.map(l => `<div style="margin-bottom:8px;padding:6px 10px;background:#fffbeb;border-left:3px solid #f59e0b"><b>${l.category} · ${l.label}</b><br>${l.content}</div>`).join('')}
+        </div>`,
+        c.id + ' 案例详情',
+        { dangerouslyUseHTMLString: true, confirmButtonText: '关闭' }
+      ).catch(() => {});
+    }
+
+    // ===== 复盘报告 =====
+    const pmDialogVisible = ref(false); const pmGenerated = ref(false);
+    const pmReport = ref({}); const pmLevelColors = {1:'#f56c6c',2:'#e6a23c',3:'#409eff',4:'#909399'};
+
+    function generatePostmortem() {
+      if (!wbTask.value) return;
+      const t = wbTask.value;
+      pmDialogVisible.value = true; pmGenerated.value = false;
+      // 模拟生成延迟
+      setTimeout(() => {
+        const now = new Date();
+        const tags = [t.iataCode, t.faultType, 'AOG等级'+t.aogLevel, t.aircraftModel];
+        if (t.reg) tags.push(t.reg);
+        pmReport.value = {
+          basic: {
+            id: t.id, reg: t.reg, aircraftModel: t.aircraftModel,
+            engineModel: t.engineModel || '待补充', level: t.aogLevel,
+            site: (t.airportCN||'') + ' ' + (t.iataCode||''), faultType: t.faultType, partNo: t.partNo
+          },
+          timeline: [
+            {time:`${now.toISOString().slice(5,16).replace('T',' ')} 发现`,event:`飞行机组报告${t.faultDesc}`},
+            {time:`${now.toISOString().slice(5,16).replace('T',' ')} 确认`,event:`工程技术确认AOG${t.aogLevel}级，启动保障流程`},
+            {time:`${now.toISOString().slice(5,16).replace('T',' ')} 调配`,event:`${t.plan}`},
+            {time:`${now.toISOString().slice(5,16).replace('T',' ')} 修复`,event:`航材到位，执行更换/测试`},
+            {time:`${now.toISOString().slice(5,16).replace('T',' ')} 放行`,event:`检查通过，飞机放行`},
+          ],
+          decisions: [
+            `${t.iataCode}本场无备件，启动${t.plan}`,
+            '航材来源优先级：外站库存 > 航司间互援 > 供应商紧急支援',
+          ],
+          lessons: [
+            {label:'备件预警',content:`${t.partNo} 在${t.iataCode}无库存，建议评估该站点常见AOG件储备`},
+            {label:'供应商确认',content:'所有供应商必须在保障阶段确认按AOG级别处理，明确出库时效'},
+            {label:'运输衔接',content:'外站航材运输需同步确认清关和最后一公里派送时间'},
+          ],
+          tags: tags,
+        };
+        pmGenerated.value = true;
+      }, 800);
+    }
+    function pmArchiveToRAG() {
+      const r = pmReport.value;
+      if (!r || !r.basic) return;
+      // 构建结构化文本，准备写入RAG知识库
+      const text = [
+        `【AOG复盘】${r.basic.id}`,
+        `机号:${r.basic.reg} | 机型:${r.basic.aircraftModel} | 站点:${r.basic.site}`,
+        `故障:${r.basic.faultType} | 件号:${r.basic.partNo} | 等级:${r.basic.level}级`,
+        '',
+        '【时间线】',...(r.timeline||[]).map(x=>`${x.time} ${x.event}`),
+        '',
+        '【决策】',...(r.decisions||[]).map((x,i)=>`${i+1}. ${x}`),
+        '',
+        '【经验教训】',...(r.lessons||[]).map(x=>`- ${x.label}: ${x.content}`),
+        '',
+        '【标签】',...(r.tags||[]).join(' '),
+      ].join('\n');
+      // 通过知识库API写入
+      axios.post(`${API}/knowledge`, {
+        title: `AOG复盘-${r.basic.id}-${r.basic.faultType}`,
+        content: text,
+        tags: r.tags,
+        dir: '01-保障经验'
+      }).then(() => {
+        ElementPlus.ElMessage.success('已归档至RAG知识库');
+        loadDirs(); loadFileList();
+      }).catch(() => {
+        ElementPlus.ElMessage.info('Demo模式：复盘数据已模拟归档到知识库（实际需后端写入向量库）');
+      });
+    }
+    function pmExport() {
+      const r = pmReport.value;
+      if (!r || !r.basic) return;
+      const text = [
+        `══════════════════════`,
+        `AOG 保障复盘报告 - ${r.basic.id}`,
+        `══════════════════════`,
+        '',
+        `【基本信息】机号:${r.basic.reg} | 机型:${r.basic.aircraftModel} | 发动机:${r.basic.engineModel} | AOG等级:${r.basic.level}级 | 站点:${r.basic.site} | 故障:${r.basic.faultType} | 件号:${r.basic.partNo}`,
+        '',
+        '【时间线】',...(r.timeline||[]).map(x=>`  ${x.time}  ${x.event}`),
+        '',
+        '【关键决策】',...(r.decisions||[]).map((x,i)=>`  ${i+1}. ${x}`),
+        '',
+        '【经验教训】',...(r.lessons||[]).map(x=>`  ⚠ ${x.label}: ${x.content}`),
+        '',
+        `【标签】${(r.tags||[]).join(' #')}`,
+        '',
+        '══════════════════════',
+      ].join('\n');
+      const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download=`AOG复盘-${r.basic.id}.txt`; a.click();
+      URL.revokeObjectURL(url);
+      ElementPlus.ElMessage.success('报告已导出');
+    }
+    // ===== 保障方案 =====
+    const spDialogVisible = ref(false); const spGenerated = ref(false); const spReport = ref({});
+    function openSupportPlanDialog() {
+      if (!wbTask.value) return;
+      spDialogVisible.value = true; spGenerated.value = false;
+      setTimeout(() => {
+        const t = wbTask.value;
+        const sols = wbSolutions.value.map((s, i) => ({
+          name: `${s.provider}·${s.origin}`,
+          parts: (s.parts || []).map(p => `${p.pn}×${p.qty}`).join('、'),
+          method: s.method || '待确认',
+          transport: s.transport || '待确认',
+          eta: s.arriveTime || '待确认',
+          contact: s.contact || '待确认'
+        }));
+        spReport.value = {
+          basic: {
+            id: t.id, reg: t.reg, aircraftModel: t.aircraftModel,
+            engineModel: t.engineModel || '待补充', level: t.aogLevel,
+            site: (t.airportCN||'') + ' ' + (t.iataCode||''), faultType: t.faultType, partNo: t.partNo,
+            deadline: t.deadline, nextFlight: formatNextFlight(t.nextFlight)
+          },
+          schemes: sols,
+          decision: `根据 AOG${t.aogLevel || 'N/A'} 级保障要求，优先选择方案1（${sols[0]?.name || ''}），同时保持方案2（${sols[1]?.name || ''}）作为备选，确保航材按时到位。`,
+          spTags: [t.iataCode, t.faultType, 'AOG等级'+t.aogLevel, t.aircraftModel, '保障方案']
+        };
+        spGenerated.value = true;
+      }, 800);
+    }
+    function spCopy() {
+      const r = spReport.value;
+      if (!r || !r.basic) return;
+      const sols = r.schemes || [];
+      const textLines = [
+        '══════════════════════',
+        `AOG 保障方案 - ${r.basic.id}`,
+        '══════════════════════',
+        '',
+        `【基本信息】`,
+        `任务编号：${r.basic.id}`,
+        `机号：${r.basic.reg || 'N/A'}　　机型：${r.basic.aircraftModel || 'N/A'}`,
+        `机场：${r.basic.site}`,
+        `故障类型：${r.basic.faultType || 'N/A'}　　发动机：${r.basic.engineModel || 'N/A'}`,
+        `需求件号：${r.basic.partNo || 'N/A'}　　需求时间：${r.basic.deadline || 'N/A'}`,
+        `下个航班：${r.basic.nextFlight}`,
+        `AOG 等级：${r.basic.level || 'N/A'}`,
+        '',
+        `【保障方案明细】`,
+        ...sols.map((s, i) => [
+          `方案${i + 1}：${s.name}`,
+          `　　航材：${s.parts}`,
+          `　　方式：${s.method}`,
+          `　　运输：${s.transport}`,
+          `　　预计到达：${s.eta}`,
+          `　　联系方式：${s.contact}`,
+          ''
+        ].join('\n')),
+        '',
+        `【决策建议】`,
+        r.decision,
+        '',
+        `【生成时间】${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
+        '',
+        '══════════════════════',
+      ];
+      const text = textLines.join('\n');
+      navigator.clipboard.writeText(text).then(() => {
+        ElementPlus.ElMessage.success('保障方案已复制到剪贴板');
+      }).catch(() => {
+        ElementPlus.ElMessage.info('复制失败，请手动复制对话框内容');
+      });
+    }
+    function spExport() {
+      const r = spReport.value;
+      if (!r || !r.basic) return;
+      const sols = r.schemes || [];
+      const textLines = [
+        '══════════════════════',
+        `AOG 保障方案 - ${r.basic.id}`,
+        '══════════════════════',
+        '',
+        `【基本信息】`,
+        `任务编号：${r.basic.id}`,
+        `机号：${r.basic.reg || 'N/A'}　　机型：${r.basic.aircraftModel || 'N/A'}`,
+        `机场：${r.basic.site}`,
+        `故障类型：${r.basic.faultType || 'N/A'}　　发动机：${r.basic.engineModel || 'N/A'}`,
+        `需求件号：${r.basic.partNo || 'N/A'}　　需求时间：${r.basic.deadline || 'N/A'}`,
+        `下个航班：${r.basic.nextFlight}`,
+        `AOG 等级：${r.basic.level || 'N/A'}`,
+        '',
+        `【保障方案明细】`,
+        ...sols.map((s, i) => [
+          `方案${i + 1}：${s.name}`,
+          `　　航材：${s.parts}`,
+          `　　方式：${s.method}`,
+          `　　运输：${s.transport}`,
+          `　　预计到达：${s.eta}`,
+          `　　联系方式：${s.contact}`,
+          ''
+        ].join('\n')),
+        '',
+        `【决策建议】`,
+        r.decision,
+        '',
+        `【生成时间】${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
+        '',
+        '══════════════════════',
+      ];
+      const text = textLines.join('\n');
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `AOG保障方案-${r.basic.id}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      ElementPlus.ElMessage.success('保障方案已导出');
+    }
+    function onWbTaskChange(taskId) {
+      wbTask.value = mockTasks.value.find(t => t.id === taskId) || null;
+      wbActivePhaseId.value = null; wbActiveNodeId.value = '';
+      wbKnowledge.value = []; wbRules.value = []; wbContacts.value = [];
+      wbCaseMatches.value = [];
+      wbDoneNodes.clear(); wbSkippedNodes.clear();
+      Object.keys(wbAuditDone).forEach(k => delete wbAuditDone[k]);
+      Object.keys(wbAutoResult).forEach(k => delete wbAutoResult[k]);
+      if (wbTask.value) {
+        axios.get(`${API}/tasks`).then(r => {
+          wbPhases.value = r.data.phases || [];
+          generateAllAnswers();
+        }).catch(() => {
+          wbPhases.value = JSON.parse(JSON.stringify(BUILTIN_CHECKLIST));
+          // 加载内置检查单后生成智能体答案
+          nextTick(() => generateAllAnswers());
+        });
+        // 匹配RAG案例
+        wbCaseMatches.value = matchRagCases(wbTask.value);
+        initSolutions();
+        showAgentWelcome();
+      }
+    }
+    function selectWbNode(node) {
+      if (node._applicable === false) return;
+      wbActiveNodeId.value = node.id;
+      if (node.type === 'auto') runAutoCheck(node);
+      fetchRecommend(node.id);
+    }
+    function selectPhase(phaseId) {
+      wbActivePhaseId.value = wbActivePhaseId.value === phaseId ? null : phaseId;
+      wbActiveNodeId.value = '';
+      if (wbActivePhaseId.value) {
+        const phase = wbPhases.value.find(p => p.id === wbActivePhaseId.value);
+        if (phase) phase.nodes.forEach(n => initNodeConfirm(n.id));
+        setTimeout(() => { initRecMap(); }, 150);
+      }
+    }
+    function wbPhaseDoneCnt(phase) {
+      return phase.nodes.filter(n => wbDoneNodes.has(n.id) || wbSkippedNodes.has(n.id)).length;
+    }
+    function wbPhaseAllDone(phase) {
+      return phase && phase.nodes.every(n => wbDoneNodes.has(n.id) || wbSkippedNodes.has(n.id));
+    }
+    function markPhaseAllDone(phase) {
+      if (!phase) return;
+      phase.nodes.forEach(n => {
+        if (!wbDoneNodes.has(n.id) && !wbSkippedNodes.has(n.id)) {
+          wbDoneNodes.add(n.id); wbSkippedNodes.delete(n.id);
+        }
+      });
+    }
+    // 智能体自动填充所有节点答案
+    function generateAllAnswers() {
+      if (!wbTask.value) return;
+      const t = wbTask.value;
+      wbPhases.value.forEach(phase => {
+        phase.nodes.forEach(node => {
+          if (node._answer) return; // 已生成过，跳过
+          node._answer = generateNodeAnswer(node, t);
+        });
+      });
+      // 自动节点执行检测
+      wbPhases.value.forEach(phase => {
+        phase.nodes.forEach(node => {
+          if (node.type === 'auto') runAutoCheck(node);
+        });
+      });
+    }
+    function generateNodeAnswer(node, task) {
+      // 基于节点类型和任务数据生成智能体推荐答案
+      const answers = {
+        // 需求确认阶段
+        '1.1': { summary: `AOG等级判定为${task.aogLevel}级（自动计算）`, detail: `站点${task.iataCode} → 区域${getSiteZone(task.iataCode)} → ${task.aogLevel}级保障。2级以上需制定备份方案并上报主管。`, data_sources: ['SITE_ZONES规则引擎', 'R5分类标准'], score: 0.95 },
+        '1.2': { summary: `机号${task.reg} → 发动机${task.engineModel} → 随机航材清单已匹配`, detail: `发动机型号${task.engineModel}对应随机航材清单已检索，件号${task.partNo}匹配结果见自动检测。`, data_sources: ['SAP航材数据库', '机务工程系统'], score: 0.88 },
+        '1.3': { summary: '需与MCC确认跟机保障航材中是否包含需求件号', detail: `需求件号${task.partNo}，请MCC核查跟机航材清单。常见跟机件包含轮胎、刹车、常用消耗件等，${task.faultType}相关件号不在此范围内。`, data_sources: ['MCC跟机清单'], related_cases: ['CASE-2025-001'], score: 0.82 },
+        '1.4': { summary: `站点${task.iataCode}外站库存查询`, detail: `当前覆盖外站：米兰(MXP)、墨尔本(MEL)、曼彻斯特(MAN)。${task.iataCode}不在覆盖范围内，需通过询件流程确认。`, data_sources: ['外站库存数据库'], score: 0.85 },
+        '1.5': { summary: 'SAP系统AOG标识需手动确认', detail: '请登录SAP确认订单已标记AOG优先级，确保后续流程按AOG级别处理。', data_sources: ['SAP操作规范'], score: 0.90 },
+        '1.6': { summary: `${task.faultType} | ${task.partNo} | ${task.location} | 需求时间${task.neededBy}`, detail: `已从任务数据提取关键信息。需确认：是否为时控件、是否需要特殊运输条件。`, data_sources: ['任务数据'], score: 0.92 },
+        '1.7': { summary: '需与MCC确认互换件及上下级组件', detail: `件号${task.partNo}的互换件和上下级组件件号需MCC通过IPC和CMM确认。化工品需列出全部件号。`, data_sources: ['IPC手册', 'CMM手册'], score: 0.80 },
+        '1.8': { summary: '需确认件号来源文件', detail: `需求件号${task.partNo}应来源于IPC或其他有效技术文件。请核实文件有效性。`, data_sources: ['IPC手册'], score: 0.87 },
+        '1.9': { summary: `下次航班: ${task.nextFlight}`, detail: `航班${task.nextFlight}，需求时间${task.neededBy}。请确保航材在需求时间前到位。`, data_sources: ['航班动态系统'], score: 0.93 },
+        '1.10': { summary: '准备初始通报内容', detail: '通报需包含：机号、故障、需求地点、需求时间、下次起飞时间、件号及数量、区域资源。', data_sources: ['通报模板'], score: 0.88 },
+        // 询件阶段
+        '2.1': { summary: '需向当地航司发送求援邮件', detail: `站点${task.iataCode}，需向当地所有航司发送求援邮件，附IPC件号文件，并电话确认。`, data_sources: ['航司联络清单'], score: 0.85 },
+        '2.2': { summary: 'AeroXChange(KLM)系统提交（按条件）', detail: '工作时间联系Wendy，非工作时间联系CS团队。需附IPC文件。', data_sources: ['KLM联络信息'], score: 0.82 },
+        '2.3': { summary: '汉莎求援（按条件触发）', detail: '参考保障预案模板发送求援邮件。历史案例显示需邮件标题标注"AOG PRIORITY"。', data_sources: ['CASE-2025-001', '汉莎流程'], related_cases: ['CASE-2025-001'], score: 0.86 },
+        '2.4': { summary: 'IATP平台AOG求援', detail: '通过IATP平台发送AOG求援邮件，附件号来源文件。', data_sources: ['IATP平台'], score: 0.80 },
+        '2.5': { summary: 'MOOG保障件求援（按条件）', detail: '工作时间联系李陶，非工作时间联系MOOG AOG团队。', data_sources: ['MOOG联络信息'], score: 0.78 },
+        '2.6': { summary: '确认OEM库存（最后选项）', detail: '当其他渠道无响应时，确认OEM库存。', data_sources: ['OEM库存查询'], score: 0.75 },
+        '2.7': { summary: '短舱/结构件专属求援通道', detail: '波音、空客、Collins、Goodrich、Safran。', data_sources: ['OEM联络清单'], score: 0.78 },
+        '2.8': { summary: '确认证书类型', detail: 'CAAC/FAA/EASA证书类型需根据来源地确认。欧洲件通常为EASA，美洲件为FAA。', data_sources: ['适航法规'], score: 0.88 },
+        '2.9': { summary: '三级审核流程：质检→工程技术→PPC', detail: '确保证书可用于吉祥航空。依次完成质检确认、工程技术确认、PPC确认。', data_sources: ['审核流程规范'], score: 0.90 },
+        '2.10': { summary: '确认支援方信息', detail: '确认支援方能否支援、取件地址和联系方式。', data_sources: ['支援方联络清单'], score: 0.82 },
+        // 确认器材关键信息
+        '3.1': { summary: '需记录航材尺寸/重量/价值', detail: `件号${task.partNo}的物理参数需查SAP或询件回复获取，用于后续运输方式选择。`, data_sources: ['SAP物料主数据'], score: 0.85 },
+        '3.2': { summary: '确认是否为危险品', detail: '需查MSDS确认是否为危险品。如是危险品，后续运输需走特殊流程。', data_sources: ['MSDS数据库'], score: 0.83 },
+        // 确认运输报关方案
+        '4.1': { summary: '运输方式选择建议', detail: '根据航材尺寸和紧急程度：手提(OBC)最快但成本高，航空货运次之，专车适合陆运短途。', data_sources: ['运输方式规则'], score: 0.85 },
+        '4.2': { summary: '手提货航班确认', detail: '通过携程等平台确认航班信息（含转机）。起飞前2小时出发。', data_sources: ['携程/航班查询'], score: 0.80 },
+        '4.3': { summary: '航空货运航班确认', detail: '通过飞常准确认航班。起飞前至少4小时送达货站。', data_sources: ['飞常准'], score: 0.82 },
+        '4.4': { summary: '确认员工自运可能性', detail: '库房、航线、驻外、营业部人员可否携带航材。', data_sources: ['人力资源信息'], score: 0.78 },
+        '4.5': { summary: '向物流单位发送邮件', detail: '参考保障预案模板，向ACS/B&H等物流单位发送邮件。', data_sources: ['物流单位清单'], score: 0.82 },
+        '4.6': { summary: '确认提货人信息', detail: '物流单位需提供提货人护照、联系电话。', data_sources: ['物流要求'], score: 0.88 },
+        '4.7': { summary: '确认接货人信息', detail: '接货人接收地址、联系方式（驻外维修人员/代理/营业部等）。', data_sources: ['驻外联络清单'], score: 0.85 },
+        '4.8': { summary: '出口报关方案', detail: '优先支援方负责报关，或物流单位代报（需授权和报关资料）。', data_sources: ['报关流程'], score: 0.83 },
+        '4.9': { summary: '进口报关方案', detail: '优先接收方负责报关，或物流单位代报。', data_sources: ['报关流程'], score: 0.83 },
+        // 监控和通报
+        '5.1': { summary: '补全检查单后班组长群粗报', detail: `任务${task.id}，${task.reg}，${task.faultType}，检查单信息已补全。`, data_sources: ['通报模板'], score: 0.88 },
+        '5.2': { summary: 'SAP系统需求提交后部门群通报', detail: '通报当地和区域内可调配资源。', data_sources: ['通报模板'], score: 0.85 },
+        '5.3': { summary: '保障方案确认后通报', detail: '通报保障方案内容，方案变更时需再次通报。', data_sources: ['通报模板'], score: 0.85 },
+        '5.4': { summary: '提货/检查/出发各节点通报', detail: '物流抵达→航材检查→承运人出发，每步通报并拍照。', data_sources: ['通报模板'], score: 0.87 },
+        '5.5': { summary: '航材装机/值机/登机通报', detail: '航材上航班→值机→登机，每步通报。', data_sources: ['通报模板'], score: 0.85 },
+        '5.6': { summary: '航班起飞→落地→提行李→物流提货通报', detail: '每步在部门群通报。', data_sources: ['通报模板'], score: 0.87 },
+        '5.7': { summary: '陆运每2小时通报一次', detail: '陆运运输期间每两小时通报进度。', data_sources: ['通报规范'], score: 0.85 },
+        '5.8': { summary: '航材到达交接通报', detail: '确认航材到达并交接完成，拍照通报。', data_sources: ['通报模板'], score: 0.88 },
+        // 收尾
+        '6.1': { summary: 'SAP合同制定确认', detail: '确认合同已制定。起飞前无法完成收发料需上报主管。', data_sources: ['SAP操作规范'], score: 0.86 },
+        '6.2': { summary: 'SAP收料/发料/差异单处理', detail: '完成收料、发料操作，如有差异处理差异单。', data_sources: ['SAP操作规范'], score: 0.86 },
+        '6.3': { summary: '确认器材归还方案', detail: '按KLM求援/跨境求援/非跨境三类场景分别执行归还。', data_sources: ['器材归还规则'], score: 0.84 },
+      };
+      const a = answers[node.id];
+      if (a) return a;
+      // 兜底生成
+      return {
+        summary: `节点${node.id}: ${node.title}`, 
+        detail: `任务${task.id} | ${task.faultType} | ${task.iataCode}`,
+        data_sources: ['任务上下文'],
+        score: 0.70
+      };
+    }
+    function runAutoCheck(node) {
+      if (!wbTask.value) return;
+      const t = wbTask.value;
+      if (node.id === '1.2') {
+        // 随机航材箱：机号→发动机型号→随机航材清单匹配
+        const eng = t.engineModel.replace(/\/P$/, ''); // CFM56-5B3/P → CFM56-5B3
+        wbAutoResult[node.id] = {status:'随机航材箱匹配完成',detail:`机号 ${t.reg} · 发动机 ${eng}\n部件 ${t.partNo}\n结果：随机航材箱中未匹配到该件号（Demo数据未覆盖）`};
+      } else if (node.id === '1.4') {
+        // 外站库存：站点→外站库存数据匹配
+        wbAutoResult[node.id] = {status:'外站库存查询完成',detail:`站点：${t.airportCN}（${t.iataCode}）\n部件：${t.partNo}\n结果：当前Demo外站数据仅覆盖米兰/墨尔本/曼彻斯特，${t.iataCode} 不在范围内`};
+      } else if (node.id === '1.9') {
+        // 下次起飞时间
+        wbAutoResult[node.id] = {status:'航班动态确认',detail:`下次航班：${t.nextFlight}\n需求时间：${t.neededBy}`};
+      } else {
+        wbAutoResult[node.id] = {status:'自动检测完成',detail:`节点：${node.title}\n任务：${t.id} ${t.reg}`};
+      }
+    }
+    function markNodeDone(nodeId) { wbDoneNodes.add(nodeId); wbSkippedNodes.delete(nodeId); }
+    function markNodeSkip(nodeId) { wbSkippedNodes.add(nodeId); wbDoneNodes.delete(nodeId); }
+    function toggleAuditStep(nodeId, stepIdx) {
+      const key = nodeId + '_' + stepIdx;
+      wbAuditDone[key] = !wbAuditDone[key];
+    }
+    function wbAuditReady(nodeId) {
+      const node = wbActiveNode.value;
+      if (!node || !node.audit_steps) return false;
+      return node.audit_steps.every((s, i) => wbAuditDone[nodeId + '_' + i]);
+    }
+    function finishAuditNode(nodeId) { if (wbAuditReady(nodeId)) { markNodeDone(nodeId); } }
+    function wbBroadcastText(node) {
+      const t = wbTask.value || {};
+      const templates = {
+        '1.10': `【AOG初始通报】\n1. 机号：${t.reg}\n2. 故障原因：${t.faultDesc}\n3. 需求地点：${t.airportCN}（${t.iataCode}）\n4. 需求时间：${t.neededBy}　下次起飞：${t.nextFlight}\n5. 需求件号/数量：${t.partNo}\n6. 区域保障航材资源：（待补充）\n7. 备注：${t.id}`,
+        '5.1': `【检查单补全 & 粗报】\n${t.id} ${t.reg} ${t.faultType}\n当前进展：检查单信息已补全，保障方案执行中。`,
+        '5.2': `【系统需求提交通报】\n${t.id} SAP系统需求已提交。\n当地及区域内可调配资源已确认。`,
+        '5.3': `【保障方案确认通报】\n${t.id} ${t.reg}\n${t.plan}\n支援方：（待确认）\n运输方式：（待确认）\n预计到达时间：（待确认）`,
+        '5.4': `【提货/检查/出发通报】\n${t.id}\n提货人/承运人已抵达提货地点。\n航材检查正常（附照片）。\n承运人已出发。`,
+        '5.6': `【航班状态通报】\n${t.id}\n□ 航班已起飞\n□ 航班已落地\n□ 承运人已提到行李\n□ 物流已提货`,
+        '5.8': `【航材到达交接通报】\n${t.id} ${t.reg}\n航材已到达外站并交接完成（附照片）。`,
+      };
+      return templates[node.id] || `【通报】${node.title}\n任务：${t.id} ${t.reg}\n内容：（根据检查单要求执行通报）`;
+    }
+    function fetchRecommend(nodeId) { wbRecLoading.value=true; wbKnowledge.value=[];wbRules.value=[];wbContacts.value=[];wbCaseMatches.value=[]; axios.get(`${API}/tasks/${nodeId}/recommend`).then(r=>{wbKnowledge.value=r.data.knowledge||[];wbRules.value=r.data.rules||[];wbContacts.value=r.data.contacts||[]}).catch(()=>{}).finally(()=>{wbRecLoading.value=false}); if (wbTask.value) { wbCaseMatches.value = matchRagCases(wbTask.value); } }
+
+    // ===== Knowledge =====
+    const dirs = ref([]); const currentDir = ref(''); const searchQuery = ref(''); const searchMode = ref(false);
+    const searchResults = ref([]); const fileItems = ref([]); const currentPage = ref(1); const fileTotal = ref(0);
+    const dirLoading = ref(false); const listLoading = ref(false);
+    const editDialogVisible = ref(false); const editMode = ref('create'); const editFileId = ref('');
+    const editForm = ref({title:'',tags:'',content:''}); const saving = ref(false);
+    const totalFiles = computed(() => dirs.value.reduce((s,d) => s+d.count,0));
+    const totalPages = computed(() => Math.ceil(fileTotal.value/20));
+    const catOpen = ref({'01':true,'02':true,'03':true,'04':true,'05':true,'06':true,'07':true});
+    function toggleCat(code) { catOpen.value[code] = !catOpen.value[code]; }
+    const canWrite = computed(() => true);
+
+    function loadDirs() { dirLoading.value=true; axios.get(`${API}/dirs`).then(r=>{dirs.value=r.data.dirs}).finally(()=>dirLoading.value=false); }
+    function selectDir(name) { currentDir.value=name; searchMode.value=false; searchQuery.value=''; currentPage.value=1; loadFileList(); }
+    function loadFileList() { listLoading.value=true; if(!currentDir.value){ fileItems.value=[]; let proms=dirs.value.map(d=>axios.get(`${API}/knowledge-by-dir/${encodeURIComponent(d.name)}`,{params:{page:1,page_size:100}}).then(r=>r.data.items||[]).catch(()=>[])); Promise.all(proms).then(rr=>{let all=[].concat(...rr);fileTotal.value=all.length;fileItems.value=all.slice((currentPage.value-1)*20,currentPage.value*20)}).finally(()=>listLoading.value=false); } else { axios.get(`${API}/knowledge-by-dir/${encodeURIComponent(currentDir.value)}`,{params:{page:currentPage.value,page_size:20}}).then(r=>{fileItems.value=r.data.items||[];fileTotal.value=r.data.total||0}).finally(()=>listLoading.value=false); } }
+    function doSearch() { if(!searchQuery.value.trim()){searchMode.value=false;loadFileList();return;} searchMode.value=true; axios.get(`${API}/search`,{params:{q:searchQuery.value,top_k:20}}).then(r=>{searchResults.value=r.data.results||[]}); }
+    function exportDir() { if(!currentDir.value)return; window.open(`${API}/export/${encodeURIComponent(currentDir.value)}`,'_blank'); }
+
+    const fullDialogVisible = ref(false); const fullTitle = ref(''); const fullContent = ref('');
+    function viewFullItem(item) { fullTitle.value=item.title; fullContent.value='加载中...'; fullDialogVisible.value=true; axios.get(`${API}/knowledge-full/${item.id}`).then(r=>{fullContent.value=r.data.content}).catch(e=>{fullContent.value='加载失败'}); }
+    function viewFileItem(item) { viewFullItem(item); }
+
+    function openCreateDialog() { editMode.value='create'; editFileId.value=''; editForm.value={title:'',tags:'',content:''}; editDialogVisible.value=true; }
+    function editFileItem(item) { editMode.value='edit'; editFileId.value=item.id; editForm.value.tags=(item.tags||[]).join(', '); editDialogVisible.value=true; axios.get(`${API}/knowledge/${item.id}`).then(r=>{editForm.value.content=r.data.content;editForm.value.title=item.title}).catch(()=>{editForm.value.title=item.title;editForm.value.content=''}); }
+    async function saveKnowledge() { saving.value=true; let p={title:editForm.value.title,content:editForm.value.content,tags:editForm.value.tags}; try { if(editMode.value==='create'){await axios.post(`${API}/knowledge`,p)}else{await axios.put(`${API}/knowledge/${editFileId.value}`,p)} editDialogVisible.value=false; ElementPlus.ElMessage.success(editMode.value==='create'?'创建成功':'保存成功'); loadFileList(); } catch(e) { ElementPlus.ElMessage.error('操作失败'); } saving.value=false; }
+    function deleteFileItem(item) { ElementPlus.ElMessageBox.confirm(`确定删除 "${item.title}"？`,'确认删除',{type:'warning'}).then(()=>axios.delete(`${API}/knowledge/${item.id}`)).then(()=>{ElementPlus.ElMessage.success('已删除');loadFileList()}).catch(()=>{}); }
+
+    const stats = ref(null);
+    function loadStats() { axios.get(`${API}/stats`).then(r=>{stats.value=r.data}); }
+
+    onMounted(() => { recalcAogLevels(); checkChatConfig(); });
+
+    return {
+      activeTab, mockTasks, listFilter, viewMode, filteredTasks, tasksActive, tasksUrgent, filterBtnStyle,
+      mapInstance, mapInitialized, initMapIfNeeded, selectTask, selectedTask, openWorkbench,
+      chatReady, chatLoading, chatMessages, chatMsgContainer, cfgApiKey, cfgApiBase, cfgModel, cfgMsg,
+      checkChatConfig, saveChatConfig, sendChat,
+      wbSelectedTaskId, wbTask, wbPhases, wbActivePhaseId, wbActiveNodeId, wbActiveNode, activePhase,
+      agentChatMessages, agentChatInput, agentChatLoading, sendAgentMessage,
+      wbDoneNodes, wbSkippedNodes, wbAuditDone, wbAutoResult,
+      wbKnowledge, wbRules, wbContacts, wbCaseMatches, wbRecLoading, onWbTaskChange, selectWbNode,
+      selectPhase, wbPhaseDoneCnt, wbPhaseAllDone, markPhaseAllDone,
+      markNodeDone, markNodeSkip, toggleAuditStep, finishAuditNode, wbAuditReady, wbBroadcastText,
+      dirs, currentDir, searchQuery, searchMode, searchResults, fileItems, currentPage, fileTotal, dirLoading, listLoading, totalFiles, totalPages, canWrite, catOpen, toggleCat, loadDirs, selectDir, loadFileList, doSearch, exportDir,
+      fullDialogVisible, fullTitle, fullContent, viewFullItem, viewFileItem,
+      editDialogVisible, editMode, editForm, saving, editFileId, openCreateDialog, editFileItem, saveKnowledge, deleteFileItem,
+      stats, loadStats,
+      viewCaseDetail,
+      // 保障方案 & 确认栏
+      wbConfirmFields, wbNodeConfirm, wbConfirmApplied, wbSolutions,
+      onConfirmChanged, applyConfirm, initSolutions, initNodeConfirm, formatNextFlight,
+      // 复盘
+      pmDialogVisible, pmGenerated, pmReport, pmLevelColors,
+      generatePostmortem, pmArchiveToRAG, pmExport,
+      // 保障方案
+      spDialogVisible, spGenerated, spReport, openSupportPlanDialog, spCopy, spExport,
+    };
+  }
+});
+app.use(ElementPlus);
+app.mount('#app');
+</script>
+</body>
+</html>
