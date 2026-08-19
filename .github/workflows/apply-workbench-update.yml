@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.sync_script/**'
+      - '.sync_script/apply.py'
 
 permissions:
   contents: write
@@ -20,16 +20,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for n in 00 01 02; do
-            if [ ! -f ".sync_script/apply.part${n}" ]; then
-              echo "Script upload in progress: missing part${n}"
-              exit 0
-            fi
-          done
-          cat .sync_script/apply.part00 .sync_script/apply.part01 .sync_script/apply.part02 > /tmp/apply.py
-          python /tmp/apply.py
+          python .sync_script/apply.py
           actual=$(sha256sum index_v3.0_minimal.html | awk '{print $1}')
-          expected='49d708fb95f5073afd109c5d60062d116afb3277d6382e771d46a44678b83299'
+          expected='b67098b8beb8f66dad2c2181dc4d8bc2bc0afbe4389a256ac0549b6ee22ff907'
           if [ "$actual" != "$expected" ]; then
             echo "SHA256 mismatch: $actual"
             exit 1
