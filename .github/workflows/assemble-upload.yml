@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.sync_payload/**'
+      - '.github/workflows/assemble-upload.yml'
 
 permissions:
   contents: write
@@ -20,10 +21,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -f .sync_payload/READY ]; then
-            echo "Upload still in progress; READY not present."
-            exit 0
-          fi
           for n in 01 02 03 04; do
             test -f ".sync_payload/payload_${n}" || { echo "Missing payload_${n}"; exit 1; }
           done
