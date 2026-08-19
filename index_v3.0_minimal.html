@@ -365,6 +365,24 @@ body{font-family:'Microsoft YaHei',system-ui,sans-serif;background:#f0f2f5;color
 .pm-btn-archive:hover{background:#5daf34}
 .pm-btn-export{background:#409eff;color:#fff}
 .pm-btn-export:hover{background:#337ecc}
+
+/* ===== AOG 五阶段工作台布局覆盖 ===== */
+.workbench{display:flex;gap:12px;height:calc(100vh - 106px);padding:10px 16px}
+.rec-panel{flex:1;min-width:0;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;flex-direction:column;overflow:hidden}
+.rec-top{flex:1;overflow-y:auto;padding:12px 14px 14px}
+.rec-map{height:238px;flex:none;position:relative;border-top:1px solid #e4e7ed;min-height:220px}
+.right-panel{width:390px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+.agent-chat-panel{flex:1;min-height:0}
+.wb-task-strip{display:flex;align-items:center;gap:18px;padding:9px 12px;background:linear-gradient(135deg,#0f2942,#244f76);color:#fff;border-radius:8px;margin-bottom:12px;overflow:hidden}
+.wb-task-main{min-width:170px}.wb-task-id{font-size:13px;font-weight:700}.wb-task-fault{font-size:10px;color:rgba(255,255,255,.68);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.wb-task-meta{display:flex;gap:18px;flex:1;min-width:0}.wb-task-meta-item{display:flex;flex-direction:column;gap:1px;min-width:72px}.wb-task-meta-item label{font-size:9px;color:rgba(255,255,255,.55)}.wb-task-meta-item span{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phase-flow{display:flex;align-items:stretch;margin-bottom:12px;background:#f8fafc;border:1px solid #e7edf4;border-radius:8px;padding:8px 10px}.phase-flow-item{display:flex;align-items:center;flex:1;min-width:0}
+.phase-step{display:flex;align-items:center;gap:7px;flex:1;min-width:0;padding:7px 8px;border-radius:6px;cursor:pointer;transition:all .15s}.phase-step:hover{background:#eef5ff}.phase-step.active{background:#eaf3ff;box-shadow:inset 0 0 0 1px #b8d5ff}.phase-step.done{background:#f0fdf4}.phase-step.partial:not(.active){background:#fffaf0}
+.phase-step-index{width:22px;height:22px;border-radius:50%;background:#e5e7eb;color:#64748b;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}.phase-step.active .phase-step-index{background:#1d4ed8;color:#fff}.phase-step.done .phase-step-index{background:#16a34a;color:#fff}.phase-step-copy{min-width:0}.phase-step-title{font-size:11px;font-weight:700;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.phase-step-progress{font-size:9px;color:#94a3b8;margin-top:1px}.phase-connector{width:18px;height:2px;background:#d8e0e8;flex-shrink:0}.phase-connector.done{background:#86c99b}
+.final-plan-card{border:1px solid #dbe7f3;border-radius:8px;background:#fbfdff;margin-bottom:12px;overflow:hidden}.final-plan-card.ready{border-color:#b7dfc5;background:#fbfffc}.final-plan-head{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #edf2f7}.final-plan-title{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#1f3c56}.final-plan-status{font-size:9px;padding:2px 7px;border-radius:8px;background:#f1f5f9;color:#64748b}.final-plan-status.ready{background:#dcfce7;color:#166534}.final-plan-body{padding:9px 10px}.final-plan-empty{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#64748b;font-size:11px;line-height:1.5}.final-plan-grid{display:grid;grid-template-columns:1.1fr .9fr .9fr .9fr;gap:8px}.final-plan-item{background:#fff;border:1px solid #edf2f7;border-radius:6px;padding:6px 8px;min-width:0}.final-plan-item label{display:block;font-size:9px;color:#94a3b8;margin-bottom:2px}.final-plan-item strong{display:block;font-size:11px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.final-plan-decision{font-size:10px;color:#64748b;line-height:1.5;margin-top:7px;padding-top:7px;border-top:1px dashed #e5e7eb}
+.phase-head-main{display:flex;align-items:center;gap:8px}.phase-head-tag{font-size:9px;color:#1d4ed8;background:#dbeafe;padding:2px 6px;border-radius:8px}.task-card-status{font-size:9px;font-weight:600;padding:2px 7px;border-radius:8px;background:#f1f5f9;color:#64748b}.task-card-status.done{background:#dcfce7;color:#166534}.task-card-status.skip{background:#fff7ed;color:#9a3412}.task-card-desc{font-size:11px;color:#64748b;line-height:1.55;padding-top:2px}
+@media(max-width:1180px){.right-panel{width:330px}.wb-task-meta{gap:10px}.final-plan-grid{grid-template-columns:1fr 1fr}}
+
 </style>
 </head>
 <body>
@@ -490,119 +508,75 @@ body{font-family:'Microsoft YaHei',system-ui,sans-serif;background:#f0f2f5;color
       <span v-if="wbTask" style="color:#909399;font-size:11px">状态：<span class="badge" :class="wbTask.status==='进行中'?'badge-blue':'badge-green'">{{ wbTask.status }}</span></span>
     </div>
     <div class="workbench" v-if="wbTask">
-      <!-- ===== 左侧面板：保障方案 ===== -->
-      <div class="sol-panel">
-        <!-- 任务信息卡 -->
-        <div class="sol-info-card">
-          <div class="sol-info-header">
-            <span class="sol-task-id">{{ wbTask.id }}</span>
-            <span class="sol-task-badge" :class="'lvl'+wbTask.aogLevel">AOG {{ wbTask.aogLevel }}级</span>
-          </div>
-          <div class="sol-info-grid">
-            <div class="sol-info-item"><span class="sol-info-label">机号</span><span class="sol-info-val">{{ wbTask.reg }}</span></div>
-            <div class="sol-info-item"><span class="sol-info-label">机型</span><span class="sol-info-val">{{ wbTask.aircraftModel }}</span></div>
-            <div class="sol-info-item"><span class="sol-info-label">发动机</span><span class="sol-info-val">{{ wbTask.engineModel }}</span></div>
-            <div class="sol-info-item"><span class="sol-info-label">地点</span><span class="sol-info-val">{{ wbTask.airportCN }}（{{ wbTask.iataCode }}）</span></div>
-            <div class="sol-info-item"><span class="sol-info-label">需求时间</span><span class="sol-info-val">{{ wbTask.neededBy }}</span></div>
-            <div class="sol-info-item"><span class="sol-info-label">故障类型</span><span class="sol-info-val">{{ wbTask.faultType }}</span></div>
-            <div class="sol-info-item"><span class="sol-info-label">下个航班</span><span class="sol-info-val">{{ formatNextFlight(wbTask.nextFlight) }}</span></div>
-          </div>
-        </div>
-
-        <!-- 保障方案列表 -->
-        <div class="sol-list">
-          <div class="sol-list-header">实时保障方案</div>
-          <div class="sol-card" v-for="(sol, si) in wbSolutions" :key="si">
-            <div class="sol-card-title">
-              <span style="font-size:11px;font-weight:600">{{ sol.provider }} · {{ sol.origin }}</span>
-              <span class="sol-card-badge" :class="sol.status==='active'?'sol-active':'sol-pending'">{{ sol.status==='active'?'执行中':'待执行' }}</span>
-            </div>
-            <div class="sol-card-body">
-              <div class="sol-row" v-for="(part, pi) in sol.parts" :key="pi">
-                <span>需求件号</span>
-                <span>{{ part.pn }}，{{ part.qty }}</span>
-              </div>
-              <div class="sol-divider">运输信息</div>
-              <div class="sol-row"><span>保障方式</span><span>{{ sol.method }}</span></div>
-              <div class="sol-row"><span>提供方</span><span>{{ sol.provider }}</span></div>
-              <div class="sol-row"><span>运货地</span><span>{{ sol.origin }}</span></div>
-              <div class="sol-row"><span>运输方式</span><span>{{ sol.transport }}</span></div>
-              <div class="sol-row"><span>计划到站</span><span>{{ sol.arriveTime }}</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===== 中间面板：智能体预填答案 + 运输进度地图 ===== -->
+      <!-- 中间主区：五阶段流程 + 最终保障方案 + 小环节明细 + 地图 -->
       <div class="rec-panel" v-if="activePhase">
         <div class="rec-top">
-          <div class="phase-head">
-            <h3>{{ activePhase.title }}</h3>
-            <span style="font-size:11px;color:#909399">{{ wbPhaseDoneCnt(activePhase) }}/{{ activePhase.nodes.length }} 项完成</span>
+          <div class="wb-task-strip">
+            <div class="wb-task-main">
+              <div class="wb-task-id">{{ wbTask.id }} · {{ wbTask.reg }}</div>
+              <div class="wb-task-fault">{{ wbTask.faultType }} · {{ wbTask.partNo }}</div>
+            </div>
+            <div class="wb-task-meta">
+              <div class="wb-task-meta-item"><label>AOG等级</label><span>Lv{{ wbTask.aogLevel }}</span></div>
+              <div class="wb-task-meta-item"><label>AOG地点</label><span>{{ wbTask.airportCN }}（{{ wbTask.iataCode }}）</span></div>
+              <div class="wb-task-meta-item"><label>需求时间</label><span>{{ wbTask.neededBy }}</span></div>
+              <div class="wb-task-meta-item"><label>下个航班</label><span>{{ formatNextFlight(wbTask.nextFlight) }}</span></div>
+            </div>
           </div>
+
+          <div class="phase-flow">
+            <div class="phase-flow-item" v-for="(p,pi) in wbPhases" :key="p.id">
+              <div class="phase-step" :class="{active:wbActivePhaseId===p.id,done:wbPhaseAllDone(p),partial:wbPhaseDoneCnt(p)>0&&!wbPhaseAllDone(p)}" @click="selectPhase(p.id)">
+                <span class="phase-step-index">{{ wbPhaseAllDone(p) ? '✓' : (pi+1) }}</span>
+                <div class="phase-step-copy">
+                  <div class="phase-step-title">{{ p.title }}</div>
+                  <div class="phase-step-progress">{{ wbPhaseDoneCnt(p) }}/{{ p.nodes.length }} 已完成</div>
+                </div>
+              </div>
+              <div v-if="pi < wbPhases.length-1" class="phase-connector" :class="{done:wbPhaseAllDone(p)}"></div>
+            </div>
+          </div>
+
+          <div class="final-plan-card" :class="{ready:spGenerated && spReport.basic && spReport.basic.id===wbTask.id}">
+            <div class="final-plan-head">
+              <div class="final-plan-title"><span>最终保障方案</span><span class="final-plan-status" :class="{ready:spGenerated && spReport.basic && spReport.basic.id===wbTask.id}">{{ spGenerated && spReport.basic && spReport.basic.id===wbTask.id ? '已生成' : '待生成' }}</span></div>
+              <el-button size="small" type="primary" plain @click="openSupportPlanDialog">{{ spGenerated && spReport.basic && spReport.basic.id===wbTask.id ? '查看完整方案' : '生成保障方案' }}</el-button>
+            </div>
+            <div class="final-plan-body">
+              <template v-if="spGenerated && spReport.basic && spReport.basic.id===wbTask.id && spReport.schemes && spReport.schemes.length">
+                <div class="final-plan-grid">
+                  <div class="final-plan-item"><label>主方案</label><strong>{{ spReport.schemes[0].name }}</strong></div>
+                  <div class="final-plan-item"><label>保障方式</label><strong>{{ spReport.schemes[0].method }}</strong></div>
+                  <div class="final-plan-item"><label>运输方式</label><strong>{{ spReport.schemes[0].transport }}</strong></div>
+                  <div class="final-plan-item"><label>预计到达</label><strong>{{ spReport.schemes[0].eta }}</strong></div>
+                </div>
+                <div class="final-plan-decision">{{ spReport.decision }}</div>
+              </template>
+              <div class="final-plan-empty" v-else><span>询件结果、运输信息和合同确认会持续汇总到这里；方案确认后作为运输监控的执行基准。</span><span style="white-space:nowrap;color:#94a3b8">建议在“运输方案”完成后生成</span></div>
+            </div>
+          </div>
+
+          <div class="phase-head"><div class="phase-head-main"><h3>{{ activePhase.title }}</h3><span class="phase-head-tag">当前环节</span></div><span style="font-size:11px;color:#909399">{{ wbPhaseDoneCnt(activePhase) }}/{{ activePhase.nodes.length }} 项完成</span></div>
           <div class="task-card" v-for="node in activePhase.nodes" :key="node.id" :class="{card_done:wbDoneNodes.has(node.id), card_skip:wbSkippedNodes.has(node.id)}">
             <div class="task-card-header">
-              <div class="task-card-title">
-                <span class="task-card-dot" :class="wbDoneNodes.has(node.id)?'done':'pending'"></span>
-                <span style="font-size:10px;color:#909399">{{ node.id }}</span>
-                <span>{{ node.title }}</span>
-              </div>
-              <div class="task-card-actions">
-                <el-button size="small" text @click="markNodeDone(node.id)" v-if="!wbDoneNodes.has(node.id)">完成</el-button>
-                <el-button size="small" text type="warning" @click="markNodeSkip(node.id)" v-if="!wbDoneNodes.has(node.id) && !wbSkippedNodes.has(node.id)">跳过</el-button>
-              </div>
+              <div class="task-card-title"><span class="task-card-dot" :class="wbDoneNodes.has(node.id)?'done':'pending'"></span><span style="font-size:10px;color:#909399">{{ node.id }}</span><span>{{ node.title }}</span></div>
+              <div class="task-card-actions"><span class="task-card-status" :class="{done:wbDoneNodes.has(node.id),skip:wbSkippedNodes.has(node.id)}">{{ wbDoneNodes.has(node.id)?'已完成':(wbSkippedNodes.has(node.id)?'已跳过':'待处理') }}</span><el-button size="small" text @click="markNodeDone(node.id)" v-if="!wbDoneNodes.has(node.id)">完成</el-button><el-button size="small" text type="warning" @click="markNodeSkip(node.id)" v-if="!wbDoneNodes.has(node.id) && !wbSkippedNodes.has(node.id)">跳过</el-button></div>
             </div>
-            <div class="task-card-body" v-if="node._answer">
-              <div class="agent-prefill">
-                <div class="ap-header"><span>智能体预填答案</span><span class="ap-score">置信度 {{ (node._answer.score*100).toFixed(0) }}%</span></div>
-                <div class="ap-content">
-                  <div class="ap-row"><b>{{ node._answer.summary }}</b></div>
-                  <div class="ap-row">{{ node._answer.detail }}</div>
-                </div>
-                <div class="ap-sources" v-if="node._answer.data_sources">数据源：{{ node._answer.data_sources.join(' · ') }}</div>
-                <div class="ap-cases" v-if="node._answer.related_cases">关联案例：{{ node._answer.related_cases.join(', ') }}</div>
-              </div>
-            </div>
+            <div class="task-card-body"><div class="task-card-desc">{{ node.desc }}</div></div>
           </div>
         </div>
         <div class="rec-map" id="recMap"></div>
       </div>
-      <div class="rec-panel" v-else>
-        <div style="text-align:center;padding:60px;color:#c0c4cc;flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column">
-          <div style="font-size:36px;margin-bottom:10px">📋</div>
-          <div style="font-size:13px">请在右侧选择一个保障阶段</div>
-        </div>
-      </div>
 
-      <!-- ===== 右侧面板：阶段 + 参考 ===== -->
+      <!-- 右侧只保留 Agent 对话 -->
       <div class="right-panel">
-        <div class="cl-panel-compact">
-          <div class="cl-scroll">
-            <div class="phase-group" v-for="p in wbPhases" :key="p.id">
-              <div class="phase-header" :class="{active_phase:wbActivePhaseId===p.id}" @click="selectPhase(p.id)">
-                <span class="phase-dot" :class="wbPhaseAllDone(p)?'all_done':(wbPhaseDoneCnt(p)>0?'partial':'')"></span>
-                <span>{{ p.title }}</span>
-                <span class="phase-progress">{{ wbPhaseDoneCnt(p) }}/{{ p.nodes.length }}</span>
-              </div>
-              <div v-if="wbActivePhaseId===p.id" style="padding:0 10px 6px">
-                <div v-for="n in p.nodes" style="font-size:10px;padding:1px 0;color:#606266;cursor:pointer" :style="{color:wbDoneNodes.has(n.id)?'#16a34a':'',fontWeight:wbDoneNodes.has(n.id)?'500':''}" @click="selectWbNode(n)">{{ n.id }} {{ n.title }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div class="agent-chat-panel">
           <div class="agent-chat-header">保障 Agent <span class="agent-status-badge">已启用</span></div>
           <div class="agent-chat-messages" ref="agentChatScroll">
-            <div v-for="(m,i) in agentChatMessages" class="msg" :class="[m.role, m.streaming?'streaming':'']">
-              <div class="msg-content" v-html="m.html||m.content"></div>
-            </div>
+            <div v-for="(m,i) in agentChatMessages" class="msg" :class="[m.role, m.streaming?'streaming':'']"><div class="msg-content" v-html="m.html||m.content"></div></div>
             <div v-if="agentChatMessages.length===0" style="text-align:center;color:#c0c4cc;padding:30px 0;font-size:11px">向保障 Agent 发送指令</div>
           </div>
-          <div class="agent-chat-input">
-            <input v-model="agentChatInput" placeholder="输入指令..." @keyup.enter="sendAgentMessage" :disabled="agentChatLoading">
-            <button @click="sendAgentMessage" :disabled="agentChatLoading || !agentChatInput.trim()">{{ agentChatLoading ? '...' : '发送' }}</button>
-          </div>
+          <div class="agent-chat-input"><input v-model="agentChatInput" placeholder="输入指令，例如：更新运输方式、ETA、支援方..." @keyup.enter="sendAgentMessage" :disabled="agentChatLoading"><button @click="sendAgentMessage" :disabled="agentChatLoading || !agentChatInput.trim()">{{ agentChatLoading ? '...' : '发送' }}</button></div>
         </div>
       </div>
     </div>
@@ -1445,59 +1419,44 @@ const app = createApp({
 
     // ===== 内置检查单数据（42节点 / 6阶段） =====
     const BUILTIN_CHECKLIST = [
-      {id:1,title:'需求确认',_exp:true,nodes:[
-        {id:'1.1',title:'确认AOG级别',type:'manual',desc:'确认AOG级别为1/2/3/4级。2级以上需制定备份方案并上报主管评估。'},
-        {id:'1.2',title:'确认随机航材箱库存',type:'auto',desc:'通过机号匹配发动机型号，检索随机航材清单。'},
-        {id:'1.3',title:'确认跟机保障航材',type:'manual',desc:'与MCC确认跟机保障航材中是否有需求件号。'},
-        {id:'1.4',title:'确认外站配备航材',type:'auto',desc:'通过站点匹配外站库存数据（米兰/墨尔本/曼彻斯特）。'},
-        {id:'1.5',title:'SAP系统确认AOG标识',type:'manual',desc:'在SAP系统中确认订单已标记AOG。'},
-        {id:'1.6',title:'SAP确认需求详情',type:'manual',desc:'确认件号、数量、需求地点、原因、是否时控件、需求时间。'},
-        {id:'1.7',title:'确认互换件及上下级组件',type:'manual',desc:'与MCC确认互换件及上下级组件件号（化工品全部件号）。'},
-        {id:'1.8',title:'确认件号来源IPC',type:'manual',desc:'确认需求件号来源于IPC或其他有效文件。'},
-        {id:'1.9',title:'确认下次起飞时间',type:'auto',desc:'从航班动态中确认下次起飞时间。'},
-        {id:'1.10',title:'班组长群初始通报',type:'broadcast',desc:'通报内容需包含机号、故障原因、需求地点、需求时间和下次起飞时间、需求件号及数量、区域保障航材资源。'},
+      {id:1,title:'询件',_exp:true,nodes:[
+        {id:'1.1',title:'核对询件需求',type:'manual',desc:'核对需求件号、数量、需求地点、需求时间、下次起飞时间及AOG等级，确保询件信息完整。'},
+        {id:'1.2',title:'多渠道发起询件',type:'manual',desc:'向当地航司、KLM、汉莎、IATP、OEM等适用渠道同步发起AOG询件。'},
+        {id:'1.3',title:'跟踪询件回复',type:'manual',desc:'持续跟踪各渠道可供数量、放件时效、价格及取件条件。'},
+        {id:'1.4',title:'证书可用性审核',type:'audit',desc:'确认CAAC/FAA/EASA等适航证书可用于吉祥航空。',audit_steps:['质检确认','工程技术确认','PPC确认']},
+        {id:'1.5',title:'确认支援方及取件信息',type:'manual',desc:'确认最终支援方、可供件号/数量、取件地址、联系人及联系方式。'},
+        {id:'1.6',title:'锁定器材来源',type:'manual',desc:'比较各询件结果，锁定主来源和备选来源，作为运输方案输入。'},
       ]},
-      {id:2,title:'询件',_exp:true,nodes:[
-        {id:'2.1',title:'向当地所有航司发送求援邮件',type:'manual',desc:'附上件号来源文件，电话联系当地航司确认收到邮件。'},
-        {id:'2.2',title:'提交AeroXChange(KLM)',type:'cond',desc:'提交系统需求，向KLM发送需求邮件。工作时间联系Wendy，非工作时间联系CS团队。'},
-        {id:'2.3',title:'向汉莎发送求援邮件',type:'cond',desc:'参考保障预案模板发送求援邮件，附上件号来源文件。'},
-        {id:'2.4',title:'IATP平台发送AOG求援',type:'cond',desc:'通过IATP平台发送AOG求援邮件，附件号来源文件。'},
-        {id:'2.5',title:'MOOG保障件求援',type:'cond',desc:'参考保障预案模板向MOOG发送需求邮件。工作时间联系李陶，非工作时间联系MOOG AOG团队。'},
-        {id:'2.6',title:'确认OEM库存',type:'cond',desc:'无其他渠道时，确认OEM库存情况。'},
-        {id:'2.7',title:'短舱/结构件求援',type:'cond',desc:'向波音、空客、Collins、Goodrich、Safran发送求援邮件。'},
-        {id:'2.8',title:'确认证书类型',type:'manual',desc:'确认CAAC/FAA/EASA证书类型。'},
-        {id:'2.9',title:'证书审核流转',type:'audit',desc:'完成三级审核，确认证书吉祥可用。',audit_steps:['质检确认','工程技术确认','PPC确认']},
-        {id:'2.10',title:'确认支援方信息',type:'manual',desc:'确认支援方能否支援、取件地址和联系方式。'},
+      {id:2,title:'运输方案',_exp:true,nodes:[
+        {id:'2.1',title:'确认器材运输属性',type:'manual',desc:'确认尺寸、重量、货值、危险品属性及特殊包装要求。'},
+        {id:'2.2',title:'确定运输方式',type:'manual',desc:'根据时效和器材属性选择手提货(OBC)、航空货运、专车或组合运输。'},
+        {id:'2.3',title:'确认航班/运输班次',type:'manual',desc:'确认航班号或陆运班次、ETD/ETA、转机衔接和最晚交运时间。'},
+        {id:'2.4',title:'确认提货人/承运人',type:'manual',desc:'确认提货人、承运人、证件信息、联系方式和抵达提货地时间。'},
+        {id:'2.5',title:'确认接货人',type:'manual',desc:'确认外站接货人、接收地址、联系方式和末端交接要求。'},
+        {id:'2.6',title:'确认出口报关',type:'manual',desc:'确认出口报关责任方、资料准备、申报状态和预计放行时间。'},
+        {id:'2.7',title:'确认进口报关',type:'manual',desc:'确认进口清关责任方、资料准备、申报状态和预计放行时间。'},
+        {id:'2.8',title:'锁定运输方案',type:'manual',desc:'汇总主运输方案、备选方案、关键时间点及风险项，形成可执行运输方案。'},
       ]},
-      {id:3,title:'确认器材关键信息',_exp:true,nodes:[
-        {id:'3.1',title:'确认尺寸/重量/价值',type:'manual',desc:'记录航材尺寸、重量、价值，用于后续运输方式判断。'},
-        {id:'3.2',title:'确认是否危险品(MSDS)',type:'cond',desc:'确认是否危险品，如是需查MSDS。标记待真人执行。'},
+      {id:3,title:'确认合同',_exp:true,nodes:[
+        {id:'3.1',title:'确认支援价格及商务条款',type:'manual',desc:'确认借件/交换/采购价格、保障费用、运输费用及其他商务条件。'},
+        {id:'3.2',title:'SAP合同制定',type:'manual',desc:'在SAP完成对应合同或订单制定，核对供应方、件号、数量及价格。'},
+        {id:'3.3',title:'核对付款/归还/赔偿条款',type:'manual',desc:'核对付款方式、器材归还期限、交换件要求、损坏或延误责任。'},
+        {id:'3.4',title:'合同确认生效',type:'manual',desc:'确认双方合同/订单已生效，支援方可正式放件并进入运输执行。'},
       ]},
-      {id:4,title:'确认运输报关方案',_exp:true,nodes:[
-        {id:'4.1',title:'确定运输方式',type:'manual',desc:'根据尺寸、重量、是否危险品选择：手提货(OBC) / 航空货运 / 专车。'},
-        {id:'4.2',title:'确认手提货航班',type:'cond',desc:'通过携程等机票购买软件确认手提货航班信息（含转机）。起飞前2小时提货准备出发。'},
-        {id:'4.3',title:'确认航空货运航班',type:'cond',desc:'通过飞常准确认航班信息。起飞前至少4小时送达货站。'},
-        {id:'4.4',title:'确认是否员工自运',type:'cond',desc:'确认库房、航线、驻外、营业部等人员可否携带。'},
-        {id:'4.5',title:'向物流单位发送邮件',type:'manual',desc:'参考保障预案模板向所有物流单位(ACS/B&H等)发送邮件。'},
-        {id:'4.6',title:'确认提货人信息',type:'manual',desc:'向物流单位确认提货人护照信息、联系电话。'},
-        {id:'4.7',title:'确认接货人信息',type:'manual',desc:'确认接货人接收地址、联系方式（驻外维修人员/维修代理/营业部/其他）。'},
-        {id:'4.8',title:'确认出口报关方案',type:'cond',desc:'优先由支援方负责报关，或物流单位负责（需额外授权及报关资料）。'},
-        {id:'4.9',title:'确认进口报关方案',type:'cond',desc:'优先由接收方负责报关，或物流单位负责（需额外授权及报关资料）。'},
+      {id:4,title:'运输进度监控',_exp:true,nodes:[
+        {id:'4.1',title:'物流抵达提货地',type:'manual',desc:'监控物流/承运人抵达支援方提货地点，并记录实际到达时间。'},
+        {id:'4.2',title:'航材检查并提货',type:'manual',desc:'核对件号、数量、包装和证书，完成提货并留存照片/交接凭证。'},
+        {id:'4.3',title:'承运人/物流出发',type:'manual',desc:'确认承运人已出发，更新实际出发时间及下一关键节点。'},
+        {id:'4.4',title:'航班起飞/陆运在途',type:'manual',desc:'航空运输监控起飞与转机；陆运按固定频率更新位置和预计到达时间。'},
+        {id:'4.5',title:'航班落地/到站',type:'manual',desc:'确认航班落地或陆运到站，关注行李/货物卸载、提取状态。'},
+        {id:'4.6',title:'末端提货派送',type:'manual',desc:'确认末端物流或接货人完成提货，监控最后一公里派送。'},
+        {id:'4.7',title:'航材到达并交接',type:'manual',desc:'确认航材到达AOG现场并完成交接，记录实际到达时间和签收凭证。'},
       ]},
-      {id:5,title:'保障方案监控和通报',_exp:true,nodes:[
-        {id:'5.1',title:'补全检查单+班组长群粗报',type:'broadcast',desc:'补全检查单信息后，在班组长群粗报当前进展。'},
-        {id:'5.2',title:'系统需求提交后部门群通报',type:'broadcast',desc:'SAP系统需求提交后，在部门群立即通报当地和区域内资源。'},
-        {id:'5.3',title:'保障方案确认通报',type:'broadcast',desc:'确认保障方案后，在部门群和班组长群通报。方案变更时需再次通报。'},
-        {id:'5.4',title:'提货/检查/出发通报',type:'broadcast',desc:'物流/承运人抵达提货地点后通报；航材检查正常、承运人出发后通报（需拍照确认）。'},
-        {id:'5.5',title:'航材装机/值机/登机通报',type:'cond',desc:'航材放上航班→承运人值机→承运人登机，每步在部门群通报。'},
-        {id:'5.6',title:'航班起飞/落地/提行李通报',type:'broadcast',desc:'航班起飞→落地→承运人提到行李→物流提货，每步在部门群通报。'},
-        {id:'5.7',title:'陆运每2小时通报',type:'cond',desc:'陆运运输每两小时在部门群通报一次进度。'},
-        {id:'5.8',title:'航材到达交接通报',type:'broadcast',desc:'确认航材到达并交接完成后，在部门群通报（需拍照确认）。'},
-      ]},
-      {id:6,title:'收尾',_exp:true,nodes:[
-        {id:'6.1',title:'SAP合同制定确认',type:'manual',desc:'确认SAP合同已制定。若起飞前无法完成收/发料手续，上报主管。'},
-        {id:'6.2',title:'SAP收料/发料/差异单',type:'manual',desc:'完成收料、发料，如有差异需处理差异单。'},
-        {id:'6.3',title:'确认器材归还方案',type:'manual',desc:'按KLM求援/跨境求援/非跨境三种场景分别执行归还规则。见检查单备注。'},
+      {id:5,title:'收尾',_exp:true,nodes:[
+        {id:'5.1',title:'SAP收料/发料/差异处理',type:'manual',desc:'完成SAP收料、发料操作，如有数量或状态差异及时处理差异单。'},
+        {id:'5.2',title:'确认器材归还方案',type:'manual',desc:'按借件/交换/跨境等场景确认归还责任、时间、运输和报关安排。'},
+        {id:'5.3',title:'关闭保障任务并完成通报',type:'manual',desc:'确认航材保障完成、飞机恢复运行后关闭任务并完成最终通报。'},
+        {id:'5.4',title:'生成复盘资料',type:'manual',desc:'沉淀关键时间线、方案变更、异常和经验，作为后续AOG案例复盘输入。'},
       ]},
     ];
 
@@ -1691,6 +1650,7 @@ const app = createApp({
     const spDialogVisible = ref(false); const spGenerated = ref(false); const spReport = ref({});
     function openSupportPlanDialog() {
       if (!wbTask.value) return;
+      if (spGenerated.value && spReport.value?.basic?.id === wbTask.value.id) { spDialogVisible.value = true; return; }
       spDialogVisible.value = true; spGenerated.value = false;
       setTimeout(() => {
         const t = wbTask.value;
@@ -1707,7 +1667,7 @@ const app = createApp({
             id: t.id, reg: t.reg, aircraftModel: t.aircraftModel,
             engineModel: t.engineModel || '待补充', level: t.aogLevel,
             site: (t.airportCN||'') + ' ' + (t.iataCode||''), faultType: t.faultType, partNo: t.partNo,
-            deadline: t.deadline, nextFlight: formatNextFlight(t.nextFlight)
+            deadline: t.neededBy, nextFlight: formatNextFlight(t.nextFlight)
           },
           schemes: sols,
           decision: `根据 AOG${t.aogLevel || 'N/A'} 级保障要求，优先选择方案1（${sols[0]?.name || ''}），同时保持方案2（${sols[1]?.name || ''}）作为备选，确保航材按时到位。`,
@@ -1814,14 +1774,9 @@ const app = createApp({
       Object.keys(wbAuditDone).forEach(k => delete wbAuditDone[k]);
       Object.keys(wbAutoResult).forEach(k => delete wbAutoResult[k]);
       if (wbTask.value) {
-        axios.get(`${API}/tasks`).then(r => {
-          wbPhases.value = r.data.phases || [];
-          generateAllAnswers();
-        }).catch(() => {
-          wbPhases.value = JSON.parse(JSON.stringify(BUILTIN_CHECKLIST));
-          // 加载内置检查单后生成智能体答案
-          nextTick(() => generateAllAnswers());
-        });
+        wbPhases.value = JSON.parse(JSON.stringify(BUILTIN_CHECKLIST));
+        wbActivePhaseId.value = wbPhases.value[0]?.id || null;
+        nextTick(() => { generateAllAnswers(); initRecMap(); });
         // 匹配RAG案例
         wbCaseMatches.value = matchRagCases(wbTask.value);
         initSolutions();
@@ -1835,7 +1790,7 @@ const app = createApp({
       fetchRecommend(node.id);
     }
     function selectPhase(phaseId) {
-      wbActivePhaseId.value = wbActivePhaseId.value === phaseId ? null : phaseId;
+      wbActivePhaseId.value = phaseId;
       wbActiveNodeId.value = '';
       if (wbActivePhaseId.value) {
         const phase = wbPhases.value.find(p => p.id === wbActivePhaseId.value);
