@@ -1,0 +1,35 @@
+name: Redesign final support plan dialog
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.sync_script/redesign_final_plan_dialog.py'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Redesign final plan dialog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python .sync_script/redesign_final_plan_dialog.py
+          grep -q 'sp-final-dialog' index_v3.0_minimal.html
+          grep -q 'sp-dialog-hero' index_v3.0_minimal.html
+          grep -q '推荐执行' index_v3.0_minimal.html
+          grep -q '备选方案' index_v3.0_minimal.html
+          grep -q 'sp-decision-box' index_v3.0_minimal.html
+          rm -rf .sync_script
+          rm -f .github/workflows/redesign-final-plan-dialog.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Redesign final AOG support plan dialog'
+          git push
