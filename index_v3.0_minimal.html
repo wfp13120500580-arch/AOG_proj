@@ -247,9 +247,6 @@ body{font-family:'Microsoft YaHei',system-ui,sans-serif;background:#f0f2f5;color
 .audit-step:hover{background:#f5f7fa}
 .audit-step .step-check{width:13px;height:13px;border:1px solid #dcdfe6;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:transparent}
 .audit-step.done .step-check{border-color:#67c23a;background:#67c23a;color:#fff}
-.wb-selector{padding:6px 16px;background:#fff;border-bottom:1px solid #e4e7ed;display:flex;align-items:center;gap:10px}
-.wb-selector span{font-size:12px;color:#606266}
-.wb-selector .el-select{width:260px}
 
 /* 历史案例卡片 */
 .case-match-card{padding:8px;margin-bottom:6px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;cursor:pointer;transition:all .12s}
@@ -464,6 +461,19 @@ body{font-family:'Microsoft YaHei',system-ui,sans-serif;background:#f0f2f5;color
 .wb-agent-v3{padding:10px 10px 10px 0;min-width:0}.wb-agent-v3 .agent-chat-panel{height:100%;border-radius:8px;border:1px solid #e1e6eb;overflow:hidden;background:#fff}.wb-agent-empty{text-align:center;color:#b6c0c9;padding:30px 0;font-size:10px}.wb-no-task{grid-column:2/4;display:flex;align-items:center;justify-content:center;color:#a1acb6;font-size:12px}
 @media(max-width:1280px){.wb-layout-v3{grid-template-columns:220px minmax(0,1fr) 310px}.wb-task-main-v3{width:180px}.wb-task-facts{gap:7px}.screen-panel{width:245px}.screen-bottom{left:265px;right:265px}}
 
+
+/* ===== Workbench task directory refinement ===== */
+.wb-task-sidebar{background:#f7f9fb}
+.wb-side-head{background:#fff;height:52px;padding:0 14px}
+.wb-side-title::before{content:'▤';font-size:12px;color:#4f83aa;margin-right:6px}
+.wb-side-list{padding:6px 8px 12px}
+.wb-side-item{border:0;border-bottom:1px solid #e8edf2;border-radius:0;margin:0;padding:10px 9px;background:transparent;box-shadow:none}
+.wb-side-item:hover{background:#eef5fa;border-color:#e8edf2}
+.wb-side-item.active{background:#e8f3fb;border:0;border-bottom:1px solid #dbe7ef;box-shadow:inset 3px 0 0 #2e83bd}
+.wb-side-item.urgent:not(.active){border-left:3px solid #e87070;padding-left:7px}
+.wb-side-row b{font-size:10px;color:#284965}
+.wb-side-node{border-top:0;padding-top:4px;margin-top:3px;color:#7a92a5}
+
 </style>
 </head>
 <body>
@@ -474,7 +484,7 @@ body{font-family:'Microsoft YaHei',system-ui,sans-serif;background:#f0f2f5;color
     <h1><span>AOG</span> 智能保障助手</h1>
     <div class="header-tabs">
       <button :class="{active:activeTab==='monitor'}" @click="activeTab='monitor';initMapIfNeeded()">监控看板</button>
-      <button :class="{active:activeTab==='workbench'}" @click="activeTab='workbench'">任务工作台</button>
+      <button :class="{active:activeTab==='workbench'}" @click="enterWorkbench()">任务工作台</button>
       <button :class="{active:activeTab==='management'}" @click="activeTab='management';if(!dirs.length)loadDirs()">知识管理</button>
     </div>
   </div>
@@ -1521,6 +1531,13 @@ const app = createApp({
       ]},
     ];
 
+    function enterWorkbench() {
+      activeTab.value = 'workbench';
+      nextTick(() => {
+        const task = wbTask.value || mockTasks.value[0];
+        if (task) { wbSelectedTaskId.value = task.id; onWbTaskChange(task.id); }
+      });
+    }
     function openWorkbench(task) { activeTab.value = 'workbench'; nextTick(() => { wbSelectedTaskId.value = task.id; onWbTaskChange(task.id); }); }
 
     // ===== 自动计算所有Mock任务的AOG等级 =====
@@ -2030,7 +2047,7 @@ const app = createApp({
 
     return {
       activeTab, mockTasks, listFilter, viewMode, filteredTasks, tasksActive, tasksUrgent, filterBtnStyle,
-      mapInstance, mapInitialized, initMapIfNeeded, selectTask, selectedTask, openWorkbench,
+      mapInstance, mapInitialized, initMapIfNeeded, selectTask, selectedTask, enterWorkbench, openWorkbench,
       chatReady, chatLoading, chatMessages, chatMsgContainer, cfgApiKey, cfgApiBase, cfgModel, cfgMsg,
       checkChatConfig, saveChatConfig, sendChat,
       wbSelectedTaskId, wbTask, wbPhases, wbActivePhaseId, wbActiveNodeId, wbActiveNode, activePhase,
