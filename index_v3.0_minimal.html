@@ -493,6 +493,11 @@ body{font-family:'Microsoft YaHei',system-ui,sans-serif;background:#f0f2f5;color
 .sp-floating-panel{height:100%;background:#fff;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden}
 .sp-floating-head{background:#173b63;color:#fff;padding:18px;display:flex;justify-content:space-between}.sp-floating-title{font-size:22px;font-weight:800}.sp-floating-close{background:none;border:0;color:#fff;font-size:24px}
 .sp-floating-body{flex:1;overflow:auto;padding:16px}.sp-dialog-hero{background:#edf6ff;border:1px solid #b7d8f2;padding:16px;border-radius:10px}.sp-scheme-badge.recommended{background:#409eff;color:#fff;padding:4px 10px;border-radius:20px}.sp-scheme-card{background:#fff;border:1px solid #dce8f3;padding:12px;margin-top:10px;border-radius:8px}.sp-decision-box{background:#fff5dd;padding:12px;border-radius:8px}.sp-floating-footer{padding:12px;text-align:right;border-top:1px solid #eee}
+
+/* ===== Embedded interactive Agent demo ===== */
+.agent-demo-frame-wrap{height:100%;width:100%;background:#fff;border:1px solid #e1e6eb;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.agent-demo-frame{display:block;width:100%;height:100%;border:0;background:#fff}
+
 </style>
 </head>
 <body>
@@ -683,15 +688,10 @@ body{font-family:'Microsoft YaHei',system-ui,sans-serif;background:#f0f2f5;color
         <div class="wb-map-v3" id="recMap"></div>
       </main>
 
-      <!-- 右侧：Agent -->
+      <!-- 右侧：完整交互 Agent Demo -->
       <aside class="wb-agent-v3">
-        <div class="agent-chat-panel">
-          <div class="agent-chat-header">保障 Agent <span class="agent-status-badge">已启用</span></div>
-          <div class="agent-chat-messages" ref="agentChatScroll">
-            <div v-for="(m,i) in agentChatMessages" :key="i" class="msg" :class="[m.role,m.streaming?'streaming':'']"><div class="msg-content" v-html="m.html||m.content"></div></div>
-            <div v-if="agentChatMessages.length===0" class="wb-agent-empty">向保障 Agent 发送指令</div>
-          </div>
-          <div class="agent-chat-input"><input v-model="agentChatInput" placeholder="输入指令，例如：更新运输方式、ETA、支援方..." @keyup.enter="sendAgentMessage" :disabled="agentChatLoading"><button @click="sendAgentMessage" :disabled="agentChatLoading||!agentChatInput.trim()">{{ agentChatLoading?'...':'发送' }}</button></div>
+        <div class="agent-demo-frame-wrap">
+          <iframe class="agent-demo-frame" src="agent_chat_demo.html" title="AOG保障Agent完整交互Demo"></iframe>
         </div>
       </aside>
     </template>
